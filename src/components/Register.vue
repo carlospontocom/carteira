@@ -1,8 +1,12 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h2>Login</h2>
-      <form @submit.prevent="login">
+  <div class="register-container">
+    <div class="register-card">
+      <h2>Crie sua Conta</h2>
+      <form @submit.prevent="register">
+        <div class="input-group">
+          <label for="name">Nome</label>
+          <input type="text" id="name" v-model="name" required>
+        </div>
         <div class="input-group">
           <label for="email">Email</label>
           <input type="email" id="email" v-model="email" required>
@@ -11,10 +15,10 @@
           <label for="password">Senha</label>
           <input type="password" id="password" v-model="password" required>
         </div>
-        <button type="submit" class="login-button">Login</button>
+        <button type="submit" class="register-button">Cadastrar</button>
       </form>
-      <p class="register-link">
-        Não tem uma conta? <router-link to="/register">Cadastre-se</router-link>
+      <p class="login-link">
+        Já tem uma conta? <router-link to="/">Faça login</router-link>
       </p>
     </div>
   </div>
@@ -22,27 +26,39 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { useRouter } from 'vue-router';
 
+const name = ref('');
 const email = ref('');
 const password = ref('');
 const router = useRouter();
 
-const login = () => {
+const register = async () => {
   const auth = getAuth();
-  signInWithEmailAndPassword(auth, email.value, password.value)
-    .then(() => {
-      router.push('/dashboard');
-    })
-    .catch(error => {
-      alert(error.message);
+  const db = getFirestore();
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value);
+    const user = userCredential.user;
+
+    // Add user to 'usuarios' collection
+    await addDoc(collection(db, 'usuarios'), {
+      uid: user.uid,
+      name: name.value,
+      email: email.value,
     });
+
+    router.push('/dashboard');
+  } catch (error) {
+    console.error('Error creating user:', error);
+    alert('Erro ao criar usuário: ' + error.message);
+  }
 };
 </script>
 
 <style scoped>
-.login-container {
+.register-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -50,7 +66,7 @@ const login = () => {
   background-color: #f0f2f5;
 }
 
-.login-card {
+.register-card {
   background: #fff;
   padding: 2rem;
   border-radius: 10px;
@@ -83,7 +99,7 @@ input {
   border-radius: 5px;
 }
 
-.login-button {
+.register-button {
   width: 100%;
   padding: 0.75rem;
   background-color: #007bff;
@@ -95,21 +111,21 @@ input {
   margin-top: 1rem;
 }
 
-.login-button:hover {
+.register-button:hover {
   background-color: #0056b3;
 }
 
-.register-link {
+.login-link {
   margin-top: 1.5rem;
   color: #666;
 }
 
-.register-link a {
+.login-link a {
   color: #007bff;
   text-decoration: none;
 }
 
-.register-link a:hover {
+.login-link a:hover {
   text-decoration: underline;
 }
 </style>
