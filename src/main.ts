@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
-import firebaseApp from './firebase';
+import './firebase'; // Import for side effects
 
 const app = createApp(App);
 
