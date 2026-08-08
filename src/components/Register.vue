@@ -52,7 +52,11 @@ const register = async () => {
     router.push('/dashboard');
   } catch (error) {
     console.error('Error creating user:', error);
-    alert('Erro ao criar usuário: ' + error.message);
+    if (error instanceof Error) {
+      alert('Erro ao criar usuário: ' + error.message);
+    } else {
+      alert('Ocorreu um erro desconhecido ao criar o usuário.');
+    }
   }
 };
 </script>
