@@ -1,36 +1,28 @@
 # Visão Geral do Projeto
 
-Este é um aplicativo Vue.js com Firebase integrado. O objetivo é fornecer uma aplicação web com autenticação de usuário e funcionalidades de dashboard.
+Este é um aplicativo Vue.js com Firebase integrado. O objetivo é fornecer uma aplicação web com autenticação de usuário e funcionalidades de dashboard, incluindo gerenciamento de finanças pessoais.
 
 ## Funcionalidades Implementadas
 
-*   **Configuração do Firebase:** O projeto está configurado para usar o Firebase para autenticação.
-*   **Página de Login:** Uma página de login básica que permite aos usuários existentes acessarem o sistema.
-*   **Página de Dashboard:** Uma página de dashboard simples que é exibida após o login bem-sucedido.
-*   **Roteamento:** O Vue Router está configurado para gerenciar a navegação entre as páginas.
+*   **Autenticação e Segurança:** Sistema completo de login, cadastro, proteção de rotas e alteração de senha com Firebase Auth.
+*   **Layout Persistente:** Estrutura de layout com menu de navegação para uma experiência de usuário consistente.
+*   **Banco de Dados Real-Time:** Integração com Cloud Firestore para persistência e sincronização de dados em tempo real.
+*   **Visualização de Dados:** Dashboard com resumos financeiros e gráfico de despesas por categoria com percentuais.
+*   **Design Polido:** Interface com estilo moderno, incluindo gradientes, sombras e foco na experiência do usuário.
+*   **CRUD Completo de Transações:** Funcionalidade para criar, ler, atualizar e excluir transações, incluindo um campo de data.
+*   **Pesquisa, Paginação e Ordenação:** A lista de transações é totalmente interativa.
+*   **UX Aprimorada:** Mensagens contextuais para listas vazias.
+*   **Carregamento Reativo:** A busca de dados é acionada pelo status de autenticação do Firebase para maior robustez.
 
-## Plano de Mudança Atual: Implementar Cadastro de Usuário
+## Plano de Mudança Atual: Correção da Lógica de Carregamento de Dados (Abordagem Sequencial)
 
-O objetivo desta mudança é adicionar a funcionalidade de cadastro de novos usuários ao sistema.
+Após múltiplas tentativas, a não exibição dos dados persiste, indicando uma falha fundamental na lógica assíncrona. A hipótese principal é uma condição de corrida onde os `onSnapshot` listeners são ativados antes que o documento do usuário no Firestore seja garantidamente existente.
 
-1.  **Criar o Componente de Cadastro (`Register.vue`):**
-    *   Um novo arquivo `Register.vue` será criado em `src/components`.
-    *   Este componente conterá um formulário com os seguintes campos:
-        *   Nome (input de texto)
-        *   Email (input de email)
-        *   Senha (input de senha)
-    *   Um botão "Cadastrar" para submeter o formulário.
+O plano é reestruturar o processo de carregamento para ser estritamente sequencial e à prova de falhas.
 
-2.  **Atualizar o Roteador (`router.ts`):**
-    *   Uma nova rota será adicionada para o caminho `/register`, que renderizará o componente `Register.vue`.
-
-3.  **Atualizar a Página de Login (`Login.vue`):**
-    *   Um link será adicionado à página de login com o texto "Não tem uma conta? Cadastre-se", que levará o usuário para a página `/register`.
-
-4.  **Implementar a Lógica de Cadastro:**
-    *   No `Register.vue`, a função `createUserWithEmailAndPassword` do Firebase Auth será usada para criar um novo usuário.
-    *   Após a criação do usuário, as informações do usuário (nome e email) serão salvas em uma coleção chamada `usuarios` no Cloud Firestore.
-    *   Após o cadastro bem-sucedido, o usuário será redirecionado para a página de dashboard.
-
-5.  **Estilização:**
-    *   A página de cadastro terá um design limpo e moderno, consistente com o restante da aplicação.
+1.  **Refatorar o Fluxo de Carregamento de Dados (`CarteiraDigital.vue`):**
+    *   No gatilho `onAuthStateChanged`, ao detectar um usuário autenticado, a primeira e única ação será chamar uma nova função, `initData(user)`.
+    *   **Aguardar a Garantia do Documento:** Dentro de `initData(user)`, a primeira etapa será `await ensureUserDocument(user)`. Esta função irá verificar a existência do documento principal do usuário (`/carteiraDigital/{uid}`) e criá-lo com valores padrão caso não exista. A execução só prosseguirá após a conclusão desta etapa.
+    *   **Ativar Listeners em Sequência:** Somente após `ensureUserDocument` ter sido resolvido, os listeners `onSnapshot` para `categorias` e `transacoes` serão configurados.
+    *   **Gerenciamento de Estado de Carregamento:** A variável `isLoading` será setada para `true` no início do `initData` e para `false` somente após o *primeiro* carregamento do listener de `transacoes`.
+    *   Esta abordagem sequencial e explícita (`await` -> `onSnapshot`) elimina a condição de corrida e garante que as consultas ao Firestore sempre operem sobre um caminho de documento válido.

@@ -1,26 +1,28 @@
 
 import { createRouter, createWebHistory } from 'vue-router';
+import AppLayout from './components/AppLayout.vue';
 import Login from './components/Login.vue';
 import Dashboard from './components/Dashboard.vue';
 import Register from './components/Register.vue';
+import CarteiraDigital from './components/CarteiraDigital.vue';
 import { getAuth } from 'firebase/auth';
 
 const routes = [
+  // Rotas não autenticadas
+  { path: '/', redirect: '/login' },
+  { path: '/login', name: 'Login', component: Login },
+  { path: '/register', name: 'Register', component: Register },
+
+  // Rotas autenticadas com o layout persistente
   {
-    path: '/',
-    name: 'Login',
-    component: Login,
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { requiresAuth: true }, // Rota protegida
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: Register,
+    path: '/app',
+    component: AppLayout,
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', redirect: '/app/dashboard' }, // Redireciona /app para /app/dashboard
+      { path: 'dashboard', name: 'Dashboard', component: Dashboard },
+      { path: 'carteira', name: 'CarteiraDigital', component: CarteiraDigital },
+    ],
   },
 ];
 
@@ -29,21 +31,22 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to, from, next) => {
   const auth = getAuth();
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isAuthenticated = auth.currentUser;
 
   if (requiresAuth && !isAuthenticated) {
-    // Se a rota requer autenticação e o usuário não está logado, redirecione para o login
-    next('/');
+    next('/login');
   } else if ((to.name === 'Login' || to.name === 'Register') && isAuthenticated) {
-    // Se o usuário está logado e tenta acessar as páginas de Login/Registro, redirecione para o dashboard
-    next('/dashboard');
+    // Se o usuário logado tentar acessar login, vai para o dashboard principal
+    next('/app/dashboard');
   } else {
-    // Caso contrário, permita a navegação
     next();
   }
 });
+
+// Ajuste no link do menu lateral, se necessário
+// O App.vue ou main.ts deve ter router.replace('/app/dashboard') no login bem-sucedido.
 
 export default router;
