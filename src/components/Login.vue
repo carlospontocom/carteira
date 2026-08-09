@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2>Login</h2>
+      <h2>Acesse sua Carteira Digital</h2>
       <form @submit.prevent="login">
         <div class="input-group">
           <label for="email">Email</label>
