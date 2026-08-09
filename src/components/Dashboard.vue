@@ -685,7 +685,8 @@ const chartOptions = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'right',
+      position: 'bottom',
+      display:'flex',
       labels: {
         color: '#333',
         font: {
@@ -711,6 +712,7 @@ const chartOptions = {
     }
   }
 }
+
 
 // --- Funções Auxiliares ---
 const formatarMes = (mes) => {
