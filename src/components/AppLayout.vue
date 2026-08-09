@@ -225,7 +225,7 @@ h3{
 .logout-btn { border-color: #e74c3c; color: #e74c3c; }
 .logout-btn:hover { background-color: #e74c3c; color: white; }
 
-.password-form input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #555; background-color: #333; color: white; }
+.password-form input { width: 100%; padding: 12px; margin-bottom: 10px; margin-top:1.3rem; border-radius: 5px; border: 1px solid #555; background-color: #333; color: white; }
 .update-message { margin-top: 10px; padding: 10px; border-radius: 5px; font-size: 0.9em; text-align: center; }
 .update-message.success { background-color: #27ae60; color: white; }
 .update-message.error { background-color: #e74c3c; color: white; }
