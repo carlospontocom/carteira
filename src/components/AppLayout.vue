@@ -146,7 +146,7 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* Estilos identicos ao Dashboard.vue anterior, para manter a consistência visual */
+
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 .app-layout {
@@ -192,6 +192,9 @@ const handleLogout = async () => {
 .sidebar.is-open { left: 0; }
 .sidebar-header { padding: 40px 25px 20px; text-align: left; border-bottom: 1px solid #333; }
 .sidebar-header p { word-wrap: break-word; color: #ccc; }
+h3{
+  margin-top:3rem;
+}
 .sidebar-content { flex-grow: 1; padding: 20px 25px; }
 .sidebar-footer { padding: 20px 25px; border-top: 1px solid #333; }
 
