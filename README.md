@@ -24,6 +24,38 @@ Este é um projeto de um aplicativo de carteira digital completo, desenvolvido c
     *   Barra lateral de navegação para um acesso rápido a todas as seções.
     *   Totalmente responsivo, adaptando-se a diferentes tamanhos de tela (desktop, tablet e mobile).
 
+## 🖼️ Telas do Sistema
+
+<p align="center">
+  <strong>Tela de Login</strong><br>
+  <em>Acesso seguro à sua carteira digital.</em><br>
+  <img src="src/printsTelas/tela__login.png" alt="Tela de Login" width="80%">
+</p>
+<hr>
+<p align="center">
+  <strong>Dashboard Financeiro</strong><br>
+  <em>Visão geral completa das suas finanças com gráficos interativos.</em><br>
+  <img src="src/printsTelas/tela__dashboard.png" alt="Dashboard Financeiro" width="80%">
+</p>
+<hr>
+<p align="center">
+  <strong>Carteira Digital</strong><br>
+  <em>Gerencie suas receitas e despesas de forma simples e organizada.</em><br>
+  <img src="src/printsTelas/tela__carteira.png" alt="Carteira Digital" width="80%">
+</p>
+<hr>
+<p align="center">
+  <strong>Menu de Navegação</strong><br>
+  <em>Acesso rápido a todas as funcionalidades do sistema.</em><br>
+  <img src="src/printsTelas/tela__menu--lateral.png" alt="Menu de Navegação" width="40%">
+</p>
+<hr>
+<p align="center">
+  <strong>Alteração de Senha</strong><br>
+  <em>Mantenha sua conta segura alterando sua senha facilmente.</em><br>
+  <img src="src/printsTelas/tela__alterar--senha.png" alt="Alteração de Senha" width="80%">
+</p>
+
 ## 🚀 Tecnologias Utilizadas
 
 *   **Front-end:**
