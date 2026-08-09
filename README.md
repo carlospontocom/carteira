@@ -2,6 +2,11 @@
 
 Este é um projeto de um aplicativo de carteira digital completo, desenvolvido com Vue.js 3, Vite, TypeScript e Firebase. Ele permite que os usuários gerenciem suas finanças pessoais, registrando receitas e despesas, visualizando um dashboard financeiro e muito mais.
 
+## 🚀 Disponível em
+
+*   **Repositório no GitHub:** [https://github.com/carlospontocom/carteira](https://github.com/carlospontocom/carteira)
+*   **Aplicação em Produção:** [https://cn-carteira.netlify.app/login](https://cn-carteira.netlify.app/login)
+
 ## ✨ Funcionalidades
 
 *   **Autenticação de Usuários:**
@@ -75,8 +80,8 @@ Este é um projeto de um aplicativo de carteira digital completo, desenvolvido c
 
 1.  **Clone o repositório:**
     ```bash
-    git clone https://github.com/seu-usuario/seu-repositorio.git
-    cd seu-repositorio
+    git clone https://github.com/carlospontocom/carteira.git
+    cd carteira
     ```
 2.  **Instale as dependências:**
     ```bash
