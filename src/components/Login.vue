@@ -5,14 +5,14 @@
       <form @submit.prevent="login">
         <div class="input-group">
           <label for="email">Email</label>
-          <input type="email" id="email" v-model="email" required>
+          <input type="email" id="email" v-model="email" required placeholder="E-mail cadastrado">
         </div>
         <div class="input-group">
           <label for="password">Senha</label>
-          <input type="password" id="password" v-model="password" required>
+          <input type="password" id="password" v-model="password" required placeholder="Senha de acesso">
         </div>
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-        <button type="submit" class="login-button">Login</button>
+        <button type="submit" class="login-button">Entrar</button>
       </form>
       <p class="register-link">
         Não tem uma conta? <router-link to="/register">Cadastre-se</router-link>
