@@ -22,15 +22,15 @@
       <div class="resumo-cards">
         <div class="card-resumo card-receita">
           <h3>Total de Receitas</h3>
-          <p>+ R$ {{ totalReceitas.toFixed(2) }}</p>
+          <p>+ R$ {{ Number(totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
         </div>
         <div class="card-resumo card-despesa">
           <h3>Total de Despesas</h3>
-          <p>- R$ {{ totalDespesas.toFixed(2) }}</p>
+          <p> R$ {{ Number(totalDespesas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
         </div>
         <div class="card-resumo card-saldo">
           <h3>Saldo Atual</h3>
-          <p>R$ {{ saldo.toFixed(2) }}</p>
+          <p>+ R$ {{ Number(totalReceitas).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
         </div>
       </div>
 
@@ -769,7 +769,7 @@ watch(mesSelecionado, () => {})
 </script>
 
 <style scoped>
-.dashboard-container {
+ .dashboard-container {
   padding: 2rem;
   animation: fadeIn 0.5s ease-in-out;
   max-width: 1200px;
@@ -1200,7 +1200,7 @@ watch(mesSelecionado, () => {})
 .insight-item {
   display: flex;
   gap: 1rem;
-  padding: 0.8rem 1rem;
+  padding: 0.8rem 0.5rem;
   border-radius: 0.5rem;
   margin-bottom: 0.5rem;
   align-items: flex-start;
@@ -1246,7 +1246,7 @@ watch(mesSelecionado, () => {})
   color: #666;
 }
 
-/* Previsão */
+/* ===== PREVISÃO ===== */
 .previsao-container {
   background: white;
   border-radius: 0.8rem;
@@ -1275,7 +1275,7 @@ watch(mesSelecionado, () => {})
   height: 200px;
   margin-bottom: 1.5rem;
   padding: 0 0.5rem;
-  gap: 0.5rem;
+  gap: 1.5rem;
 }
 
 .previsao-bar-container {
@@ -1284,12 +1284,17 @@ watch(mesSelecionado, () => {})
   align-items: center;
   flex: 1;
   height: 100%;
+  min-width: 40px;
+  max-width: 80px;
 }
 
 .previsao-label {
   font-size: 0.8rem;
   color: #666;
   margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 3px 0;
+  text-align: center;
 }
 
 .previsao-bar-wrapper {
@@ -1299,27 +1304,34 @@ watch(mesSelecionado, () => {})
   align-items: flex-end;
   justify-content: center;
   min-height: 50px;
+  margin: 1rem 0 0 0;
 }
 
 .previsao-bar {
-  width: 80%;
+  width: 100%;
   min-height: 20px;
+  max-width: 60px;
   border-radius: 4px 4px 0 0;
   position: relative;
   transition: height 0.6s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem 0;
 }
 
 .previsao-valor {
-  font-size: 0.65rem;
-  color: white;
+  font-size: 0.55rem;
   font-weight: 700;
   text-shadow: 0 1px 3px rgba(0,0,0,0.3);
   position: absolute;
-  top: -18px;
+  top: -1.8rem;
   white-space: nowrap;
+  padding: 0.2rem 0.3rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 3px;
+  display: inline-block;
+  line-height: 1.2;
 }
 
 .previsao-resumo {
@@ -1365,7 +1377,7 @@ watch(mesSelecionado, () => {})
 .chart-wrapper {
   height: 400px;
   position: relative;
-}
+ }
 
 .loading {
   text-align: center;
@@ -1482,81 +1494,49 @@ watch(mesSelecionado, () => {})
   }
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 1rem;
+/* ===== RESPONSIVO ===== */
+@media (max-width: 525px) {
+  .insight-content {
+    padding: 1.5rem 10px;
   }
-
+  
+  .insights-container {
+    padding: 1.5rem 5px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .previsao-container {
+    padding: 1.5rem 0.5rem !important;
+  }
+  
   .dashboard-header h1 {
-    font-size: 2rem;
-  }
-
-  .resumo-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .card-resumo p {
     font-size: 1.8rem;
+    margin-top: 1.3rem;
   }
-
-  .chart-wrapper {
-    height: 300px;
-  }
-
-  .grafico-container {
-    padding: 1rem;
-  }
-
-  .filtro-mes {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .resumo-mensal {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .top-item {
-    grid-template-columns: 30px 1fr;
-  }
-
-  .top-bar {
-    grid-column: 1 / -1;
-  }
-
-  .top-porcentagem {
-    grid-column: 1 / -1;
-    text-align: left;
-  }
-
-  .saude-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .indicadores-grid {
-    grid-template-columns: 1fr;
-  }
-
+  
   .previsao-grafico {
+    gap: 0.8rem;
+    padding: 0 0.2rem;
     height: 150px;
   }
-
-  .previsao-resumo {
-    grid-template-columns: 1fr;
-    text-align: center;
+  
+  .previsao-bar-container {
+    min-width: 25px;
+    max-width: 50px;
   }
-
+  
+  .previsao-bar {
+    max-width: 35px;
+    min-height: 15px;
+  }
+  
   .previsao-valor {
-    font-size: 0.5rem;
-    top: -14px;
-  }
-
-  .sem-dados-lista {
-    flex-direction: column;
-    gap: 0.5rem;
+    font-size: 0.45rem;
+    top: -1.6rem;
+    padding: 0.1rem 0.2rem;
+    background: rgba(255,255,255,0.9);
+    color: #1a1a2e;
+    text-shadow: none;
   }
 }
 
@@ -1564,23 +1544,127 @@ watch(mesSelecionado, () => {})
   .resumo-mensal {
     grid-template-columns: 1fr;
   }
-
+  
   .score-circle {
     width: 60px;
     height: 60px;
   }
-
+  
   .score-number {
     font-size: 1.4rem;
   }
-
+  
   .saude-financeira {
     padding: 1rem;
   }
-
+  
   .insight-item {
     flex-direction: column;
     align-items: flex-start;
   }
+  
+  .previsao-grafico {
+    gap: 0.5rem;
+    height: 120px;
+  }
+  
+  .previsao-bar-container {
+    min-width: 20px;
+    max-width: 40px;
+  }
+  
+  .previsao-bar {
+    max-width: 28px;
+    min-height: 12px;
+    padding: 0.5rem 0;
+  }
+  
+  .previsao-valor {
+    font-size: 0.4rem;
+    top: -1.4rem;
+    padding: 0.05rem 0.15rem;
+  }
 }
-</style>
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
+  
+  .resumo-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-resumo p {
+    font-size: 1.8rem;
+  }
+  
+  .chart-wrapper {
+    height: 300px;
+  }
+  
+  .grafico-container {
+    padding: 1rem;
+  }
+  
+  .filtro-mes {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .resumo-mensal {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .top-item {
+    grid-template-columns: 30px 1fr;
+  }
+  
+  .top-bar {
+    grid-column: 1 / -1;
+  }
+  
+  .top-porcentagem {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  
+  .saude-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .indicadores-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .previsao-grafico {
+    height: 150px;
+  }
+  
+  .previsao-resumo {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  
+  .sem-dados-lista {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 525px) {
+  .grafico-container .card {
+    padding: 0.4rem;
+  }
+  
+  .insight-item {
+    padding: 0.8rem 0rem;
+  }
+}
+ </style>

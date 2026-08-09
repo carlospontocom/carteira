@@ -152,12 +152,12 @@
           <li v-for="item in transacoesPaginadas" :key="item.id" class="item">
             <div class="info">
               <!-- DESTACA O TEXTO DA BUSCA -->
-              <strong v-html="destacarTexto(item.descricao)"></strong>
+              <p class="text-show-item" v-html="destacarTexto(item.descricao)"></p>
               <span class="categoria">{{ item.categoria }}</span>
               <span class="data">{{ formatarData(item.data) }}</span>
             </div>
             <div class="valor">
-              <span :style="{ color: item.tipo === 'receita' ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }">
+              <span :style="{ color: item.tipo === 'receita' ? '#27ae60' : '#e74c3c', fontWeight: 'bold', fontSize:'12px'}">
                 {{ item.tipo === 'receita' ? '+' : '-' }} R$ {{ item.valor?.toFixed(2) }}
               </span>
             </div>
@@ -482,6 +482,12 @@ onUnmounted(() => {
   padding: 2rem;
 }
 
+@media (max-width: 500px){
+  .container{
+    padding:2rem .9rem;
+  }
+}
+
 h1 {
   color: #1a1a1a;
   margin-bottom: 2rem;
@@ -496,10 +502,16 @@ h1 {
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
+@media (max-width:475px){
+  .card{
+        padding: 20px 6px;
+  }
+}
+
 .card h2 {
   margin-top: 0;
   margin-bottom: 1.5rem;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   color: #333;
 }
 
@@ -737,6 +749,13 @@ h1 {
   transition: background 0.2s;
 }
 
+@media (max-width:475px){
+  .item{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .item:hover {
   background: #f8f9fa;
   border-radius: 8px;
@@ -751,6 +770,19 @@ h1 {
 }
 
 /* DESTAQUE DA BUSCA */
+
+.text-show-item{
+  text-transform: uppercase;
+  font-weight:bold;
+}
+
+
+@media (max-width:500px){
+  .text-show-item{
+    font-size:12px;
+  }
+}
+
 .destaque {
   background: #ffeb3b;
   padding: 0.1rem 0.2rem;
@@ -775,6 +807,8 @@ h1 {
   font-size: 1.05rem;
 }
 
+
+
 .acoes {
   display: flex;
   gap: 0.5rem;
@@ -784,10 +818,16 @@ h1 {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   padding: 0.3rem 0.5rem;
   border-radius: 4px;
   transition: all 0.2s;
+}
+
+@media (max-width:500px){
+  .btn-edit, .btn-delete{
+    font-size:0.9rem;
+}
 }
 
 .btn-edit:hover {
@@ -831,6 +871,12 @@ h1 {
   transition: all 0.2s;
 }
 
+@media (max-width:475px){
+  .page-btn{
+     padding: .4rem .6rem;
+  }
+}
+
 .page-btn:hover:not(:disabled) {
   background: #3498db;
   color: white;
@@ -851,6 +897,14 @@ h1 {
 }
 
 /* Responsivo */
+
+
+@media (max-width:475px){
+  .page-info{ 
+    font-size:15px;
+  }
+}
+
 @media (max-width: 768px) {
   .controls-wrapper {
     flex-direction: column;

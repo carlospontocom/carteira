@@ -253,6 +253,9 @@ h3{
 }
 
 @media (max-width: 767px) {
+  main.main-content{
+    padding:1.5rem .7rem;
+  }
   .sidebar.is-open ~ .main-content .content-overlay { display: block; }
 }
 
