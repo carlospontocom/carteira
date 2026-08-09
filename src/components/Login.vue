@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h2>Acesse sua Carteira Digital</h2>
+      <h2>Acesse<br/> Carteira Digital</h2>
       <form @submit.prevent="login">
         <div class="input-group">
           <label for="email">Email</label>
@@ -74,7 +74,7 @@ const login = () => {
   text-align: center;
 }
 
-h2 { margin-bottom: 1.5rem; color: #333; }
+h2 { margin-bottom: 2.5rem; color: #333; }
 .input-group { margin-bottom: 1rem; text-align: left; }
 label { display: block; margin-bottom: 0.5rem; color: #666; }
 input { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 5px; }
