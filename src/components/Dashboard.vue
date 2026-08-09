@@ -53,6 +53,155 @@
           <strong>{{ transacoesFiltradas.length }}</strong>
         </div>
       </div>
+
+      <!-- 🩺 SAÚDE FINANCEIRA -->
+      <div class="saude-financeira card">
+        <div class="saude-header">
+          <div>
+            <h2>🩺 Saúde Financeira</h2>
+            <p class="saude-subtitulo">Análise inteligente dos seus hábitos financeiros</p>
+          </div>
+          
+          <div class="saude-score">
+            <div v-if="temDadosSuficientes" class="score-circle" :class="classeScore">
+              <span class="score-number">{{ scoreFinanceiro }}</span>
+              <span class="score-label">/100</span>
+            </div>
+            <div v-else class="score-circle score-indisponivel">
+              <span class="score-number">?</span>
+              <span class="score-label">/100</span>
+            </div>
+            <span class="score-status">{{ statusScore }}</span>
+          </div>
+        </div>
+
+        <!-- ⭐ MENSAGEM QUANDO NÃO HÁ DADOS -->
+        <div v-if="!temDadosSuficientes" class="perfil-risco-container sem-dados">
+          <div class="sem-dados-content">
+            <div class="sem-dados-icon">📊</div>
+            <h3 class="sem-dados-titulo">Risco financeiro não gerado</h3>
+            <p class="sem-dados-texto">
+              O cliente não registrou suas finanças ou não há dados suficientes para análise.
+            </p>
+            <p class="sem-dados-subtexto">
+              Para gerar o perfil de risco, é necessário ter pelo menos:
+            </p>
+            <ul class="sem-dados-lista">
+              <li>✅ 1 transação de receita</li>
+              <li>✅ 1 transação de despesa</li>
+              <li>✅ Categorias definidas</li>
+            </ul>
+            <router-link to="/app/carteira" class="sem-dados-botao">
+              ➕ Adicionar transações
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Cards de Indicadores (só aparece se tiver dados) -->
+        <div v-if="temDadosSuficientes" class="indicadores-grid">
+          <div class="indicador-card">
+            <div class="indicador-icon">💰</div>
+            <div class="indicador-info">
+              <span class="indicador-label">Capacidade de Economia</span>
+              <div class="indicador-bar">
+                <div class="indicador-bar-fill" :style="{ width: indicadores.economia + '%' }"></div>
+              </div>
+              <span class="indicador-valor">{{ indicadores.economia }}%</span>
+              <span class="indicador-detalhe">{{ indicadores.economiaTexto }}</span>
+            </div>
+          </div>
+
+          <div class="indicador-card">
+            <div class="indicador-icon">🏠</div>
+            <div class="indicador-info">
+              <span class="indicador-label">Gastos com Moradia</span>
+              <div class="indicador-bar">
+                <div class="indicador-bar-fill" :style="{ width: Math.min(indicadores.moradia, 100) + '%', background: indicadores.moradia > 50 ? '#e74c3c' : '#2ecc71' }"></div>
+              </div>
+              <span class="indicador-valor">{{ indicadores.moradia }}%</span>
+              <span class="indicador-detalhe">{{ indicadores.moradiaTexto }}</span>
+            </div>
+          </div>
+
+          <div class="indicador-card">
+            <div class="indicador-icon">📊</div>
+            <div class="indicador-info">
+              <span class="indicador-label">Diversificação de Gastos</span>
+              <div class="indicador-bar">
+                <div class="indicador-bar-fill" :style="{ width: indicadores.diversificacao + '%', background: indicadores.diversificacao > 60 ? '#2ecc71' : '#e67e22' }"></div>
+              </div>
+              <span class="indicador-valor">{{ indicadores.diversificacao }}%</span>
+              <span class="indicador-detalhe">{{ indicadores.diversificacaoTexto }}</span>
+            </div>
+          </div>
+
+          <div class="indicador-card">
+            <div class="indicador-icon">🛡️</div>
+            <div class="indicador-info">
+              <span class="indicador-label">Reserva de Emergência</span>
+              <div class="indicador-bar">
+                <div class="indicador-bar-fill" :style="{ width: Math.min(indicadores.reserva * 10, 100) + '%', background: indicadores.reserva >= 6 ? '#2ecc71' : '#e74c3c' }"></div>
+              </div>
+              <span class="indicador-valor">{{ indicadores.reserva }} meses</span>
+              <span class="indicador-detalhe">{{ indicadores.reservaTexto }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insights e Recomendações (só aparece se tiver dados) -->
+        <div v-if="temDadosSuficientes" class="insights-container">
+          <div class="insights-header">
+            <span>💡 Insights e Recomendações</span>
+            <span class="insights-count">{{ insights.length }} insights</span>
+          </div>
+          
+          <div v-if="insights.length === 0" class="nenhum-insight">
+            🎉 Parabéns! Sua saúde financeira está excelente!
+          </div>
+          
+          <div v-for="(insight, index) in insights" :key="index" class="insight-item" :class="insight.tipo">
+            <div class="insight-icon">{{ insight.icone }}</div>
+            <div class="insight-content">
+              <p class="insight-texto">{{ insight.texto }}</p>
+              <p v-if="insight.dica" class="insight-dica">💡 {{ insight.dica }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Previsão de Saldo (só aparece se tiver dados) -->
+        <div v-if="temDadosSuficientes" class="previsao-container">
+          <div class="previsao-header">
+            <span>🔮 Previsão de Saldo</span>
+            <span class="previsao-periodo">Próximos 6 meses</span>
+          </div>
+          
+          <div class="previsao-grafico">
+            <div v-for="(item, index) in previsao" :key="index" class="previsao-bar-container">
+              <div class="previsao-label">{{ item.mes }}</div>
+              <div class="previsao-bar-wrapper">
+                <div class="previsao-bar" :style="{ height: item.altura + '%', background: item.cor }">
+                  <span class="previsao-valor">R$ {{ item.valor }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="previsao-resumo">
+            <div class="previsao-cenario">
+              <span class="cenario-label">📈 Cenário Atual</span>
+              <span class="cenario-valor">R$ {{ previsao[previsao.length - 1]?.valor || '0' }}</span>
+            </div>
+            <div class="previsao-cenario">
+              <span class="cenario-label">🎯 Meta (R$ 10.000)</span>
+              <span class="cenario-valor">{{ tempoParaMeta }}</span>
+            </div>
+            <div class="previsao-cenario">
+              <span class="cenario-label">⚡ Economia Mensal</span>
+              <span class="cenario-valor">R$ {{ economiaMensal.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Corpo Principal com Gráfico -->
@@ -111,12 +260,21 @@ const carregando = ref(true)
 const mesSelecionado = ref('todos')
 let unsubscribe = () => {}
 
+// --- ⭐ VERIFICA SE HÁ DADOS SUFICIENTES ---
+const temDadosSuficientes = computed(() => {
+  const receitas = transacoesFiltradas.value.filter(t => t.tipo === 'receita' && t.valor > 0)
+  const despesas = transacoesFiltradas.value.filter(t => t.tipo === 'despesa' && t.valor > 0)
+  const categorias = new Set(transacoesFiltradas.value.map(t => t.categoria))
+  
+  return receitas.length > 0 && despesas.length > 0 && categorias.size > 0
+})
+
 // --- Meses Disponíveis ---
 const mesesDisponiveis = computed(() => {
   const meses = new Set()
   transacoes.value.forEach(t => {
     if (t.data) {
-      const mes = t.data.substring(0, 7) // YYYY-MM
+      const mes = t.data.substring(0, 7)
       meses.add(mes)
     }
   })
@@ -193,7 +351,311 @@ const topCategorias = computed(() => {
       porcentagem: total > 0 ? (valor / total) * 100 : 0
     }))
     .sort((a, b) => b.valor - a.valor)
-    .slice(0, 5) // Top 5
+    .slice(0, 5)
+})
+
+// --- 🩺 SAÚDE FINANCEIRA - Cálculos ---
+
+// 1. Score Financeiro (0-100)
+const scoreFinanceiro = computed(() => {
+  if (!temDadosSuficientes.value) return 0
+  
+  let score = 0
+  
+  const economiaPercent = totalReceitas.value > 0 
+    ? (saldo.value / totalReceitas.value) * 100 
+    : 0
+  if (economiaPercent >= 20) score += 25
+  else if (economiaPercent >= 10) score += 18
+  else if (economiaPercent >= 5) score += 10
+  else if (economiaPercent > 0) score += 5
+  
+  const moradiaPercent = totalReceitas.value > 0
+    ? (despesasMoradia.value / totalReceitas.value) * 100
+    : 0
+  if (moradiaPercent <= 30) score += 20
+  else if (moradiaPercent <= 40) score += 15
+  else if (moradiaPercent <= 50) score += 10
+  else if (moradiaPercent <= 60) score += 5
+  
+  const numCategorias = Object.keys(despesasPorCategoria.value).length
+  if (numCategorias >= 6) score += 20
+  else if (numCategorias >= 4) score += 15
+  else if (numCategorias >= 3) score += 10
+  else if (numCategorias >= 2) score += 5
+  
+  const mesesReserva = calcularMesesReserva()
+  if (mesesReserva >= 6) score += 20
+  else if (mesesReserva >= 4) score += 15
+  else if (mesesReserva >= 2) score += 10
+  else if (mesesReserva >= 1) score += 5
+  
+  const regularidade = calcularRegularidade()
+  if (regularidade >= 0.9) score += 15
+  else if (regularidade >= 0.7) score += 10
+  else if (regularidade >= 0.5) score += 5
+  
+  return Math.min(Math.round(score), 100)
+})
+
+// 2. Status do Score
+const statusScore = computed(() => {
+  if (!temDadosSuficientes.value) return '📊 Sem dados'
+  
+  const score = scoreFinanceiro.value
+  if (score >= 80) return '🌟 Excelente!'
+  if (score >= 60) return '👍 Bom'
+  if (score >= 40) return '📊 Regular'
+  if (score >= 20) return '⚠️ Atenção'
+  return '🚨 Crítico'
+})
+
+const classeScore = computed(() => {
+  if (!temDadosSuficientes.value) return 'score-indisponivel'
+  
+  const score = scoreFinanceiro.value
+  if (score >= 80) return 'score-excelente'
+  if (score >= 60) return 'score-bom'
+  if (score >= 40) return 'score-regular'
+  if (score >= 20) return 'score-atencao'
+  return 'score-critico'
+})
+
+// 3. Indicadores
+const despesasPorCategoria = computed(() => {
+  return transacoesFiltradas.value
+    .filter(t => t.tipo === 'despesa' && t.valor)
+    .reduce((acc, t) => {
+      acc[t.categoria] = (acc[t.categoria] || 0) + t.valor
+      return acc
+    }, {})
+})
+
+const despesasMoradia = computed(() => {
+  const moradia = transacoesFiltradas.value
+    .filter(t => t.tipo === 'despesa' && 
+           (t.categoria === 'Moradia' || t.categoria === 'Aluguel' || t.categoria === 'Financiamento'))
+    .reduce((acc, t) => acc + t.valor, 0)
+  return moradia
+})
+
+const indicadores = computed(() => {
+  if (!temDadosSuficientes.value) {
+    return {
+      economia: 0,
+      economiaTexto: '📊 Sem dados suficientes',
+      moradia: 0,
+      moradiaTexto: '📊 Sem dados suficientes',
+      diversificacao: 0,
+      diversificacaoTexto: '📊 Sem dados suficientes',
+      reserva: 0,
+      reservaTexto: '📊 Sem dados suficientes'
+    }
+  }
+  
+  const receita = totalReceitas.value
+  const despesa = totalDespesas.value
+  const economia = receita > 0 ? ((receita - despesa) / receita) * 100 : 0
+  const moradia = receita > 0 ? (despesasMoradia.value / receita) * 100 : 0
+  
+  const categorias = Object.keys(despesasPorCategoria.value)
+  const diversificacao = categorias.length > 0 ? Math.min((categorias.length / 8) * 100, 100) : 0
+  
+  const mesesReserva = calcularMesesReserva()
+  
+  return {
+    economia: Math.min(Math.round(economia), 100),
+    economiaTexto: economia >= 20 ? '✅ Ótimo! Você economiza mais de 20%' :
+                   economia >= 10 ? '👍 Bom, mas pode melhorar' :
+                   economia >= 5 ? '📊 Economia básica' :
+                   economia > 0 ? '⚠️ Economia muito baixa' : '🚨 Você não está economizando',
+    moradia: Math.round(moradia),
+    moradiaTexto: moradia <= 30 ? '✅ Dentro do recomendado (≤30%)' :
+                  moradia <= 40 ? '👍 Um pouco acima do ideal' :
+                  moradia <= 50 ? '📊 Atenção: está alto' :
+                  moradia <= 60 ? '⚠️ Muito alto: reavalie' : '🚨 Crítico: moradia consome demais',
+    diversificacao: Math.min(Math.round(diversificacao), 100),
+    diversificacaoTexto: diversificacao >= 70 ? '✅ Ótima diversificação!' :
+                         diversificacao >= 50 ? '👍 Diversificação regular' :
+                         diversificacao >= 30 ? '📊 Pouca diversificação' : '⚠️ Gastos concentrados em poucas categorias',
+    reserva: Math.round(mesesReserva * 10) / 10,
+    reservaTexto: mesesReserva >= 6 ? '✅ Reserva confortável (6+ meses)' :
+                  mesesReserva >= 4 ? '👍 Reserva razoável' :
+                  mesesReserva >= 2 ? '📊 Reserva mínima' :
+                  mesesReserva >= 1 ? '⚠️ Reserva muito baixa' : '🚨 Sem reserva de emergência'
+  }
+})
+
+// 4. Calcular meses de reserva
+function calcularMesesReserva() {
+  const despesaMedia = transacoesFiltradas.value
+    .filter(t => t.tipo === 'despesa' && t.valor)
+    .reduce((acc, t) => acc + t.valor, 0) / Math.max(1, transacoesFiltradas.value.length)
+  
+  if (despesaMedia === 0) return 0
+  return saldo.value / despesaMedia
+}
+
+// 5. Regularidade de entradas
+function calcularRegularidade() {
+  const receitas = transacoesFiltradas.value
+    .filter(t => t.tipo === 'receita' && t.valor)
+  
+  if (receitas.length < 2) return 0
+  
+  const valores = receitas.map(t => t.valor)
+  const media = valores.reduce((a, b) => a + b, 0) / valores.length
+  const desvio = Math.sqrt(valores.reduce((a, b) => a + Math.pow(b - media, 2), 0) / valores.length)
+  const variacao = media > 0 ? desvio / media : 0
+  
+  return Math.max(0, 1 - variacao)
+}
+
+// 6. Insights
+const insights = computed(() => {
+  if (!temDadosSuficientes.value) return []
+  
+  const lista = []
+  const score = scoreFinanceiro.value
+  const economia = indicadores.value.economia
+  const moradia = indicadores.value.moradia
+  const reserva = indicadores.value.reserva
+  
+  if (economia < 10 && score > 0) {
+    lista.push({
+      icone: '💰',
+      tipo: 'alerta',
+      texto: `Sua capacidade de economia está em ${economia}%, abaixo do ideal (20%)`,
+      dica: 'Que tal cortar gastos supérfluos e aumentar sua economia?'
+    })
+  } else if (economia >= 20) {
+    lista.push({
+      icone: '🌟',
+      tipo: 'sucesso',
+      texto: `Excelente! Você economiza ${economia}% da sua renda`,
+      dica: 'Continue assim! Considere investir esse dinheiro'
+    })
+  }
+  
+  if (moradia > 50) {
+    lista.push({
+      icone: '🏠',
+      tipo: 'alerta',
+      texto: `Moradia consome ${moradia}% da sua renda, muito acima do ideal (30%)`,
+      dica: 'Reavalie seu aluguel/financiamento ou considere dividir moradia'
+    })
+  } else if (moradia > 30 && moradia <= 50) {
+    lista.push({
+      icone: '📊',
+      tipo: 'atencao',
+      texto: `Moradia consome ${moradia}% da sua renda, um pouco acima do ideal`,
+      dica: 'Tente negociar o aluguel ou reduzir gastos com contas'
+    })
+  }
+  
+  if (reserva < 3) {
+    lista.push({
+      icone: '🛡️',
+      tipo: 'alerta',
+      texto: `Sua reserva de emergência é de apenas ${reserva} meses`,
+      dica: 'Comece a guardar R$ 100/mês para construir sua reserva'
+    })
+  } else if (reserva >= 6) {
+    lista.push({
+      icone: '🛡️',
+      tipo: 'sucesso',
+      texto: `Excelente! Você tem ${reserva} meses de reserva de emergência`,
+      dica: 'Considere investir parte dessa reserva'
+    })
+  }
+  
+  const numCategorias = Object.keys(despesasPorCategoria.value).length
+  if (numCategorias < 3 && totalDespesas.value > 0) {
+    lista.push({
+      icone: '📊',
+      tipo: 'atencao',
+      texto: `Seus gastos estão concentrados em apenas ${numCategorias} categorias`,
+      dica: 'Tente diversificar seus gastos para melhor controle'
+    })
+  }
+  
+  if (score < 40 && score > 0) {
+    lista.push({
+      icone: '📉',
+      tipo: 'alerta',
+      texto: `Sua saúde financeira está em ${score}/100, precisa de atenção`,
+      dica: 'Siga as recomendações acima para melhorar sua situação'
+    })
+  }
+  
+  const lazerTotal = transacoesFiltradas.value
+    .filter(t => t.tipo === 'despesa' && t.categoria === 'Lazer')
+    .reduce((acc, t) => acc + t.valor, 0)
+  
+  if (lazerTotal > 0 && totalDespesas.value > 0) {
+    const lazerPercent = (lazerTotal / totalDespesas.value) * 100
+    if (lazerPercent > 30) {
+      lista.push({
+        icone: '🎮',
+        tipo: 'atencao',
+        texto: `Lazer representa ${lazerPercent.toFixed(1)}% das suas despesas`,
+        dica: 'Tente reduzir gastos com lazer e redirecionar para investimentos'
+      })
+    }
+  }
+  
+  return lista.slice(0, 5)
+})
+
+// 7. Previsão de Saldo (6 meses)
+const previsao = computed(() => {
+  if (!temDadosSuficientes.value) {
+    return Array(6).fill({ mes: '---', valor: '0.00', altura: 5, cor: '#ccc' })
+  }
+  
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun']
+  const economiarMensal = economiaMensal.value
+  const saldoAtual = saldo.value
+  
+  return meses.map((mes, index) => {
+    const valor = saldoAtual + (economiarMensal * (index + 1))
+    const maxValor = Math.max(saldoAtual + (economiarMensal * 6), 1000)
+    const altura = Math.max((valor / maxValor) * 100, 5)
+    
+    let cor = '#2ecc71'
+    if (valor < 0) cor = '#e74c3c'
+    else if (valor < 500) cor = '#f39c12'
+    
+    return {
+      mes,
+      valor: valor.toFixed(2),
+      altura: Math.min(altura, 100),
+      cor
+    }
+  })
+})
+
+// 8. Economia Mensal
+const economiaMensal = computed(() => {
+  if (!temDadosSuficientes.value || transacoesFiltradas.value.length === 0) return 0
+  return saldo.value / Math.max(1, transacoesFiltradas.value.length)
+})
+
+// 9. Tempo para Meta (R$ 10.000)
+const tempoParaMeta = computed(() => {
+  if (!temDadosSuficientes.value) return '📊 Sem dados'
+  
+  const economia = economiaMensal.value
+  if (economia <= 0) return '🚨 Sem economia'
+  
+  const meta = 10000
+  const saldoAtual = saldo.value
+  if (saldoAtual >= meta) return '🎯 Meta atingida!'
+  
+  const meses = (meta - saldoAtual) / economia
+  if (meses < 1) return `${Math.round(meses * 30)} dias`
+  if (meses < 12) return `${Math.round(meses)} meses`
+  return `${Math.round(meses / 12)} anos e ${Math.round(meses % 12)} meses`
 })
 
 // --- Computadas para o Gráfico ---
@@ -259,9 +721,7 @@ const formatarMes = (mes) => {
   return `${meses[parseInt(mesNum) - 1]} ${ano}`
 }
 
-const atualizarDados = () => {
-  // Força a atualização dos dados filtrados
-}
+const atualizarDados = () => {}
 
 // --- Buscar Dados ---
 const buscarTransacoes = (user) => {
@@ -305,10 +765,7 @@ onUnmounted(() => {
   }
 })
 
-// --- Watchers ---
-watch(mesSelecionado, () => {
-  // Atualiza quando o mês muda
-})
+watch(mesSelecionado, () => {})
 </script>
 
 <style scoped>
@@ -328,7 +785,6 @@ watch(mesSelecionado, () => {
   padding: 2rem;
 }
 
-/* Cabeçalho */
 .dashboard-header {
   margin-bottom: 2.5rem;
 }
@@ -341,7 +797,6 @@ watch(mesSelecionado, () => {
   text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Filtro por Mês */
 .filtro-mes {
   display: flex;
   align-items: center;
@@ -383,7 +838,6 @@ watch(mesSelecionado, () => {
   font-size: 0.9rem;
 }
 
-/* Cards de Resumo */
 .resumo-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -431,7 +885,6 @@ watch(mesSelecionado, () => {
   background: linear-gradient(45deg, #3498db, #2980b9);
 }
 
-/* Resumo Mensal */
 .resumo-mensal {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -480,6 +933,420 @@ watch(mesSelecionado, () => {
   color: #9b59b6;
 }
 
+.saude-financeira {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.saude-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.saude-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.saude-subtitulo {
+  color: #666;
+  margin: 0.3rem 0 0 0;
+  font-size: 0.95rem;
+}
+
+.saude-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.score-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  position: relative;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.score-number {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.score-label {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.score-excelente {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: white;
+}
+
+.score-bom {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+.score-regular {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+}
+
+.score-atencao {
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  color: white;
+}
+
+.score-critico {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+.score-indisponivel {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  color: white;
+}
+
+.score-status {
+  margin-top: 0.3rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* ⭐ SEM DADOS */
+.sem-dados {
+  border-color: #f1c40f;
+  background: #fffef5;
+}
+
+.sem-dados-content {
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.sem-dados-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.sem-dados-titulo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+}
+
+.sem-dados-texto {
+  color: #666;
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+}
+
+.sem-dados-subtexto {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+
+.sem-dados-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1.5rem 0;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.sem-dados-lista li {
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.sem-dados-botao {
+  display: inline-block;
+  background: linear-gradient(45deg, #3498db, #2980b9);
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 0.8rem;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.sem-dados-botao:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+}
+
+/* Indicadores Grid */
+.indicadores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.indicador-card {
+  background: white;
+  padding: 1.2rem;
+  border-radius: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: transform 0.3s ease;
+}
+
+.indicador-card:hover {
+  transform: translateY(-4px);
+}
+
+.indicador-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.indicador-info {
+  flex: 1;
+}
+
+.indicador-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.3rem;
+}
+
+.indicador-bar {
+  height: 6px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.3rem;
+}
+
+.indicador-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #3498db, #2ecc71);
+  transition: width 0.6s ease;
+}
+
+.indicador-valor {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #333;
+  margin-right: 0.5rem;
+}
+
+.indicador-detalhe {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Insights */
+.insights-container {
+  background: white;
+  border-radius: 0.8rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.insights-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.insights-count {
+  background: #e9ecef;
+  padding: 0.2rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.nenhum-insight {
+  text-align: center;
+  padding: 1rem;
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.insight-item {
+  display: flex;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  align-items: flex-start;
+}
+
+.insight-item:last-child {
+  margin-bottom: 0;
+}
+
+.insight-item.sucesso {
+  background: #d4edda;
+  border-left: 4px solid #28a745;
+}
+
+.insight-item.atencao {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+}
+
+.insight-item.alerta {
+  background: #f8d7da;
+  border-left: 4px solid #dc3545;
+}
+
+.insight-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.insight-content {
+  flex: 1;
+}
+
+.insight-texto {
+  margin: 0 0 0.2rem 0;
+  font-weight: 500;
+  color: #333;
+}
+
+.insight-dica {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Previsão */
+.previsao-container {
+  background: white;
+  border-radius: 0.8rem;
+  padding: 1.5rem;
+}
+
+.previsao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.previsao-periodo {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 400;
+}
+
+.previsao-grafico {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 200px;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+  gap: 0.5rem;
+}
+
+.previsao-bar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+}
+
+.previsao-label {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.previsao-bar-wrapper {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 50px;
+}
+
+.previsao-bar {
+  width: 80%;
+  min-height: 20px;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height 0.6s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.previsao-valor {
+  font-size: 0.65rem;
+  color: white;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  position: absolute;
+  top: -18px;
+  white-space: nowrap;
+}
+
+.previsao-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.previsao-cenario {
+  display: flex;
+  flex-direction: column;
+}
+
+.cenario-label {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.cenario-valor {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+}
+
 /* Gráfico */
 .grafico-container {
   padding: 2rem;
@@ -526,7 +1393,6 @@ watch(mesSelecionado, () => {
   text-decoration: underline;
 }
 
-/* Top Categorias */
 .top-categorias {
   padding: 2rem;
 }
@@ -663,11 +1529,58 @@ watch(mesSelecionado, () => {
     grid-column: 1 / -1;
     text-align: left;
   }
+
+  .saude-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .indicadores-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .previsao-grafico {
+    height: 150px;
+  }
+
+  .previsao-resumo {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .previsao-valor {
+    font-size: 0.5rem;
+    top: -14px;
+  }
+
+  .sem-dados-lista {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
   .resumo-mensal {
     grid-template-columns: 1fr;
+  }
+
+  .score-circle {
+    width: 60px;
+    height: 60px;
+  }
+
+  .score-number {
+    font-size: 1.4rem;
+  }
+
+  .saude-financeira {
+    padding: 1rem;
+  }
+
+  .insight-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
