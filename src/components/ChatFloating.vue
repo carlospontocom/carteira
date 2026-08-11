@@ -9,9 +9,7 @@ import {
   onSnapshot,
   query,
   orderBy,
-  Timestamp,
-  getDocs,
-  where
+  Timestamp
 } from 'firebase/firestore'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { db } from '../firebase'
@@ -62,7 +60,7 @@ interface Comando {
 /* =========================================================
    ESTADO - CHAT
 ========================================================= */
-const isChatOpen = ref(false)
+
 const mensagens = ref<Mensagem[]>([
   {
     id: '1',
@@ -121,11 +119,11 @@ let unsubscribeAuth: (() => void) | null = null
 
 
 /* =========================================================
-   🔥 COMANDOS ESPECIAIS - COM TIPO EXPLÍCITO
+   🔥 COMANDOS ESPECIAIS
 ========================================================= */
 
-// 🔥 DEFINE O TIPO DO OBJETO
-const comandos: Record<string, Comando> = {
+// 🔥 DEFINE O TIPO DO OBJETO COM INDEX SIGNATURE
+const comandos: { [key: string]: Comando } = {
   'kkk': {
     descricao: 'Mostra o histórico de buscas como tags',
     acao: mostrarHistoricoTags
@@ -195,15 +193,13 @@ function limparHistoricoComando(): { texto: string; tags: string[] } | null {
   return { texto: '🧹 Histórico de buscas limpo com sucesso!', tags: [] }
 }
 
-// 🔥 PROCESSADOR DE COMANDO COM TIPAGEM CORRETA
+// 🔥 PROCESSADOR DE COMANDO
 function processarComando(comando: string): { texto: string; tags: string[] } | null {
   const cmd = comando.toLowerCase().trim()
   
-  // Verifica se o comando existe no objeto
-  if (cmd in comandos) {
-    // 🔥 Usa a função com segurança de tipo
-    const comandoEncontrado = comandos[cmd]
-    return comandoEncontrado.acao()
+  // 🔥 Usa hasOwnProperty para verificar se o comando existe
+  if (Object.prototype.hasOwnProperty.call(comandos, cmd)) {
+    return comandos[cmd].acao()
   }
   
   return null
@@ -586,10 +582,6 @@ function limparTermosBuscados() {
    AÇÕES DO CHAT
 ========================================================= */
 
-function toggleChat() {
-  isChatOpen.value = !isChatOpen.value
-}
-
 function adicionarMensagem(tipo: 'usuario' | 'ia' | 'sistema', texto: string, opcoes?: Conhecimento[], tags?: string[]) {
   const mensagem: Mensagem = {
     id: Date.now().toString(),
@@ -839,305 +831,266 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div>
-    <button class="chat-toggle-button" @click="toggleChat">
-      💬
-    </button>
+  <div class="chat-app">
 
-    <div v-if="isChatOpen" class="chat-app">
-
-      <!-- HEADER -->
-      <header class="header">
-        <div class="header-content">
-          <div class="logo">
-            <div class="logo-icon">🤖</div>
-            <div>
-              <h1>Assistente IA</h1>
-              <div class="status-bar">
-                <span class="status-dot" :class="{ connected: !erro }"></span>
-                <span>{{ erro ? '⚠️ Erro' : '🔥 Firebase' }}</span>
-                <span class="badge">{{ totalConhecimentos }} conhecimentos</span>
-              </div>
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">🤖</div>
+          <div>
+            <h1>Assistente IA</h1>
+            <div class="status-bar">
+              <span class="status-dot" :class="{ connected: !erro }"></span>
+              <span>{{ erro ? '⚠️ Erro' : '🔥 Firebase' }}</span>
+              <span class="badge">{{ totalConhecimentos }} conhecimentos</span>
             </div>
           </div>
-          <div class="header-actions">
-            <button class="btn-icon" @click="limparChat" title="Limpar chat">
-              🗑️
-            </button>
-            <button class="btn-primary" @click="abrirModal">
-              🧠 Gerenciar
-            </button>
-            <button class="btn-icon" @click="toggleChat" title="Fechar chat">
+        </div>
+        <div class="header-actions">
+          <button class="btn-icon" @click="limparChat" title="Limpar chat">
+            🗑️
+          </button>
+          <button class="btn-primary" @click="abrirModal">
+            🧠 Gerenciar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CHAT -->
+    <main ref="chatContainer" class="chat-area">
+      
+      <!-- Welcome -->
+      <div v-if="mensagens.length === 1 && mensagens[0].tipo === 'sistema'" class="welcome">
+        <div class="welcome-icon">🤖</div>
+        <h2>Como posso ajudar?</h2>
+        <p>Faça uma pergunta para consultar a base de conhecimento.</p>
+        
+        <!-- TERMOS MAIS BUSCADOS -->
+        <div v-if="termosUnicos.length > 0" class="termos-container">
+          <div class="termos-header">
+            <span class="termos-titulo">🔥 Termos mais buscados</span>
+            <button class="btn-limpar-termos" @click="limparTermosBuscados" title="Limpar histórico">
               ✕
             </button>
           </div>
-        </div>
-      </header>
-
-      <!-- CHAT -->
-      <main ref="chatContainer" class="chat-area">
-        
-        <!-- Welcome -->
-        <div v-if="mensagens.length === 1 && mensagens[0].tipo === 'sistema'" class="welcome">
-          <div class="welcome-icon">🤖</div>
-          <h2>Como posso ajudar?</h2>
-          <p>Faça uma pergunta para consultar a base de conhecimento.</p>
-          
-          <!-- TERMOS MAIS BUSCADOS -->
-          <div v-if="termosUnicos.length > 0" class="termos-container">
-            <div class="termos-header">
-              <span class="termos-titulo">🔥 Termos mais buscados</span>
-              <button class="btn-limpar-termos" @click="limparTermosBuscados" title="Limpar histórico">
-                ✕
-              </button>
-            </div>
-            <div class="termos-grid">
-              <button 
-                v-for="item in termosUnicos" 
-                :key="item.termo"
-                class="btn-termo"
-                @click="buscarPorTermo(item.termo)"
-              >
-                {{ item.termo }}
-              </button>
-            </div>
-          </div>
-
-          <div class="search-info-badge">
-            🔍 Busca nos dados do Firebase: 
-            <strong>Pergunta</strong> · <strong>Resposta</strong> · <strong>Palavras-chave</strong>
-          </div>
-          <div class="suggestions">
-            <button @click="mensagem = 'reativar'">🔄 Reativar</button>
-            <button @click="mensagem = 'cancelar'">📋 Cancelar</button>
-            <button @click="mensagem = 'vue'">💻 Vue</button>
-            <button @click="mensagem = 'processo'">📜 Processo</button>
-          </div>
-          <div class="exemplo-busca">
-            💡 Digite "kkk" para ver seu histórico de buscas como tags clicáveis!
-          </div>
-        </div>
-
-        <!-- Loading -->
-        <div v-if="carregando" class="loading-state">
-          <div class="spinner"></div>
-          <p>Carregando base de conhecimento...</p>
-        </div>
-
-        <!-- Mensagens -->
-        <div v-for="item in mensagens" :key="item.id" class="message-row" :class="item.tipo">
-          <div class="avatar">
-            {{ item.tipo === 'ia' ? '🤖' : item.tipo === 'sistema' ? '⚡' : '👤' }}
-          </div>
-          <div class="message-content">
-            <div class="message-name">
-              {{ item.tipo === 'ia' ? 'Assistente IA' : item.tipo === 'sistema' ? 'Sistema' : 'Você' }}
-            </div>
-            
-            <div class="message" v-html="item.texto.replace(/\n/g, '<br>').replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>')"></div>
-            
-            <!-- TAGS DO HISTÓRICO -->
-            <div v-if="item.tags && item.tags.length > 0" class="tags-container">
-              <div class="tags-grid">
-                <button 
-                  v-for="tag in item.tags" 
-                  :key="tag"
-                  class="btn-tag-historico"
-                  @click="buscarPorTermo(tag)"
-                >
-                  🔍 {{ tag }}
-                </button>
-              </div>
-            </div>
-            
-            <!-- OPÇÕES -->
-            <div v-if="item.opcoes && item.opcoes.length > 0" class="opcoes-container">
-              <div class="opcoes-grid">
-                <button 
-                  v-for="(opcao, index) in item.opcoes" 
-                  :key="opcao.id"
-                  class="btn-opcao"
-                  @click="selecionarOpcao(opcao)"
-                >
-                  <span class="opcao-numero">{{ index + 1 }}</span>
-                  <span class="opcao-texto">{{ opcao.pergunta }}</span>
-                  <span class="opcao-seta">→</span>
-                </button>
-              </div>
-            </div>
-            
-            <div class="time">{{ item.horario }}</div>
-          </div>
-        </div>
-
-        <!-- Digitando -->
-        <div v-if="digitando" class="message-row ia">
-          <div class="avatar">🤖</div>
-          <div class="message-content">
-            <div class="message-name">Assistente IA</div>
-            <div class="typing"><span></span><span></span><span></span></div>
-          </div>
-        </div>
-
-      </main>
-
-      <!-- INPUT -->
-      <footer class="footer">
-        <div class="input-area">
-          <textarea 
-            v-model="mensagem" 
-            rows="1" 
-            placeholder="Digite sua pergunta..." 
-            @keydown="enviarComEnter"
-            :disabled="carregando"
-          ></textarea>
-          <button 
-            class="send-button" 
-            :disabled="!mensagem.trim() || digitando || carregando" 
-            @click="enviarMensagem"
-          >
-            ➤
-          </button>
-        </div>
-        <div class="footer-info">
-          <span>💡 Digite Enter para enviar</span>
-          <span v-if="erro" class="error-text">⚠️ {{ erro }}</span>
-          <span v-if="termosUnicos.length > 0" class="termos-count">🔥 {{ termosUnicos.length }} termos</span>
-        </div>
-      </footer>
-
-      <!-- MODAL CRUD -->
-      <div v-if="mostrarModal" class="modal-overlay" @click.self="fecharModal">
-        <div class="modal">
-          <div class="modal-header">
-            <div>
-              <h2>{{ editandoId ? '✏️ Editar' : '🧠 Novo Conhecimento' }}</h2>
-              <p>{{ editandoId ? 'Altere o conhecimento existente.' : 'Adicione uma nova pergunta e resposta.' }}</p>
-              <small style="color: #94a3b8; font-size: 12px;">🔥 Dados salvos no Firebase</small>
-            </div>
-            <button class="close-button" @click="fecharModal">✕</button>
-          </div>
-
-          <div class="modal-body">
-            <div class="form-group">
-              <label>Pergunta *</label>
-              <input v-model="formPergunta" type="text" placeholder="Digite a pergunta..." class="form-input" />
-            </div>
-
-            <div class="form-group">
-              <label>Resposta *</label>
-              <textarea v-model="formResposta" rows="4" placeholder="Digite a resposta..." class="form-input"></textarea>
-            </div>
-
-            <div class="form-group">
-              <label>Palavras-chave *</label>
-              <input v-model="formPalavrachave" type="text" placeholder="ex: reativar, processo, suspenso" class="form-input" />
-              <small>🔑 Separe por vírgula. <span class="tag-count">{{ totalPalavrasChave }} palavras</span></small>
-            </div>
-
-            <div class="form-group">
-              <label>Categoria</label>
-              <input v-model="formCategoria" type="text" placeholder="Ex: Processos, Serviços, Programação" class="form-input" />
-            </div>
-
-            <button class="btn-primary full" @click="salvarConhecimento">
-              {{ editandoId ? '💾 Atualizar' : '➕ Adicionar' }}
+          <div class="termos-grid">
+            <button 
+              v-for="item in termosUnicos" 
+              :key="item.termo"
+              class="btn-termo"
+              @click="buscarPorTermo(item.termo)"
+            >
+              {{ item.termo }}
             </button>
           </div>
+        </div>
 
-          <div class="modal-footer">
-            <div class="list-header">
-              <h3>📚 Conhecimentos cadastrados ({{ conhecimentos.length }})</h3>
+        <div class="search-info-badge">
+          🔍 Busca nos dados do Firebase: 
+          <strong>Pergunta</strong> · <strong>Resposta</strong> · <strong>Palavras-chave</strong>
+        </div>
+        <div class="suggestions">
+          <button @click="mensagem = 'reativar'">🔄 Reativar</button>
+          <button @click="mensagem = 'cancelar'">📋 Cancelar</button>
+          <button @click="mensagem = 'vue'">💻 Vue</button>
+          <button @click="mensagem = 'processo'">📜 Processo</button>
+        </div>
+        <div class="exemplo-busca">
+          💡 Digite "kkk" para ver seu histórico de buscas como tags clicáveis!
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="carregando" class="loading-state">
+        <div class="spinner"></div>
+        <p>Carregando base de conhecimento...</p>
+      </div>
+
+      <!-- Mensagens -->
+      <div v-for="item in mensagens" :key="item.id" class="message-row" :class="item.tipo">
+        <div class="avatar">
+          {{ item.tipo === 'ia' ? '🤖' : item.tipo === 'sistema' ? '⚡' : '👤' }}
+        </div>
+        <div class="message-content">
+          <div class="message-name">
+            {{ item.tipo === 'ia' ? 'Assistente IA' : item.tipo === 'sistema' ? 'Sistema' : 'Você' }}
+          </div>
+          
+          <div class="message" v-html="item.texto.replace(/\n/g, '<br>').replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>')"></div>
+          
+          <!-- TAGS DO HISTÓRICO -->
+          <div v-if="item.tags && item.tags.length > 0" class="tags-container">
+            <div class="tags-grid">
+              <button 
+                v-for="tag in item.tags" 
+                :key="tag"
+                class="btn-tag-historico"
+                @click="buscarPorTermo(tag)"
+              >
+                🔍 {{ tag }}
+              </button>
             </div>
-            
-            <div v-if="conhecimentos.length === 0" class="empty-list">
-              <p>Nenhum conhecimento cadastrado.</p>
+          </div>
+          
+          <!-- OPÇÕES -->
+          <div v-if="item.opcoes && item.opcoes.length > 0" class="opcoes-container">
+            <div class="opcoes-grid">
+              <button 
+                v-for="(opcao, index) in item.opcoes" 
+                :key="opcao.id"
+                class="btn-opcao"
+                @click="selecionarOpcao(opcao)"
+              >
+                <span class="opcao-numero">{{ index + 1 }}</span>
+                <span class="opcao-texto">{{ opcao.pergunta }}</span>
+                <span class="opcao-seta">→</span>
+              </button>
             </div>
-            
-            <div v-for="item in conhecimentos" :key="item.id" class="knowledge-item">
-              <div class="knowledge-info">
-                <strong>❓ {{ item.pergunta }}</strong>
-                <span class="categoria-badge">{{ item.categoria || 'Geral' }}</span>
-                <p>{{ item.resposta }}</p>
-                <div class="tags">
-                  <span v-for="palavra in item.palavrachave" :key="palavra" class="tag">#{{ palavra }}</span>
-                </div>
-                <div class="meta">
-                  <span v-if="item.criadorEmail">👤 {{ item.criadorEmail }}</span>
-                  <span v-if="item.createdAt">📅 {{ new Date(item.createdAt.seconds * 1000).toLocaleDateString('pt-BR') }}</span>
-                </div>
+          </div>
+          
+          <div class="time">{{ item.horario }}</div>
+        </div>
+      </div>
+
+      <!-- Digitando -->
+      <div v-if="digitando" class="message-row ia">
+        <div class="avatar">🤖</div>
+        <div class="message-content">
+          <div class="message-name">Assistente IA</div>
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- INPUT -->
+    <footer class="footer">
+      <div class="input-area">
+        <textarea 
+          v-model="mensagem" 
+          rows="1" 
+          placeholder="Digite sua pergunta..." 
+          @keydown="enviarComEnter"
+          :disabled="carregando"
+        ></textarea>
+        <button 
+          class="send-button" 
+          :disabled="!mensagem.trim() || digitando || carregando" 
+          @click="enviarMensagem"
+        >
+          ➤
+        </button>
+      </div>
+      <div class="footer-info">
+        <span>💡 Digite Enter para enviar</span>
+        <span v-if="erro" class="error-text">⚠️ {{ erro }}</span>
+        <span v-if="termosUnicos.length > 0" class="termos-count">🔥 {{ termosUnicos.length }} termos</span>
+      </div>
+    </footer>
+
+    <!-- MODAL CRUD -->
+    <div v-if="mostrarModal" class="modal-overlay" @click.self="fecharModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2>{{ editandoId ? '✏️ Editar' : '🧠 Novo Conhecimento' }}</h2>
+            <p>{{ editandoId ? 'Altere o conhecimento existente.' : 'Adicione uma nova pergunta e resposta.' }}</p>
+            <small style="color: #94a3b8; font-size: 12px;">🔥 Dados salvos no Firebase</small>
+          </div>
+          <button class="close-button" @click="fecharModal">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Pergunta *</label>
+            <input v-model="formPergunta" type="text" placeholder="Digite a pergunta..." class="form-input" />
+          </div>
+
+          <div class="form-group">
+            <label>Resposta *</label>
+            <textarea v-model="formResposta" rows="4" placeholder="Digite a resposta..." class="form-input"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Palavras-chave *</label>
+            <input v-model="formPalavrachave" type="text" placeholder="ex: reativar, processo, suspenso" class="form-input" />
+            <small>🔑 Separe por vírgula. <span class="tag-count">{{ totalPalavrasChave }} palavras</span></small>
+          </div>
+
+          <div class="form-group">
+            <label>Categoria</label>
+            <input v-model="formCategoria" type="text" placeholder="Ex: Processos, Serviços, Programação" class="form-input" />
+          </div>
+
+          <button class="btn-primary full" @click="salvarConhecimento">
+            {{ editandoId ? '💾 Atualizar' : '➕ Adicionar' }}
+          </button>
+        </div>
+
+        <div class="modal-footer">
+          <div class="list-header">
+            <h3>📚 Conhecimentos cadastrados ({{ conhecimentos.length }})</h3>
+          </div>
+          
+          <div v-if="conhecimentos.length === 0" class="empty-list">
+            <p>Nenhum conhecimento cadastrado.</p>
+          </div>
+          
+          <div v-for="item in conhecimentos" :key="item.id" class="knowledge-item">
+            <div class="knowledge-info">
+              <strong>❓ {{ item.pergunta }}</strong>
+              <span class="categoria-badge">{{ item.categoria || 'Geral' }}</span>
+              <p>{{ item.resposta }}</p>
+              <div class="tags">
+                <span v-for="palavra in item.palavrachave" :key="palavra" class="tag">#{{ palavra }}</span>
               </div>
-              <div class="item-actions">
-                <button class="btn-edit" @click="editarConhecimento(item)" title="Editar">✏️</button>
-                <button class="btn-delete" @click="excluirConhecimento(item.id)" title="Excluir">🗑️</button>
+              <div class="meta">
+                <span v-if="item.criadorEmail">👤 {{ item.criadorEmail }}</span>
+                <span v-if="item.createdAt">📅 {{ new Date(item.createdAt.seconds * 1000).toLocaleDateString('pt-BR') }}</span>
               </div>
+            </div>
+            <div class="item-actions">
+              <button class="btn-edit" @click="editarConhecimento(item)" title="Editar">✏️</button>
+              <button class="btn-delete" @click="excluirConhecimento(item.id)" title="Excluir">🗑️</button>
             </div>
           </div>
         </div>
       </div>
-
     </div>
+
   </div>
 </template>
 
 <style scoped>
 /* ============================================================
-   BOTÃO FLUTUANTE
-============================================================ */
-.chat-toggle-button {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: #2563eb;
-  color: white;
-  font-size: 28px;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-  transition: all 0.3s ease;
-  z-index: 2001;
-}
-.chat-toggle-button:hover {
-  background: #1d4ed8;
-  transform: scale(1.1);
-}
-/* ============================================================
    ESTILOS GERAIS
 ============================================================ */
+
 * {
   box-sizing: border-box;
 }
+
 .chat-app {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  width: 420px;
-  height: 90vh;
-  max-height: 700px;
-  z-index: 2000;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  background: #f8fafc;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
 }
+
 /* ============================================================
    HEADER
 ============================================================ */
+
 .header {
   padding: 14px 24px;
   background: #0f172a;
   color: white;
   flex-shrink: 0;
 }
+
 .header-content {
   max-width: 1100px;
   margin: 0 auto;
@@ -1146,11 +1099,13 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 15px;
 }
+
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
 .logo-icon {
   width: 45px;
   height: 45px;
@@ -1161,11 +1116,13 @@ onUnmounted(() => {
   background: #2563eb;
   font-size: 24px;
 }
+
 .logo h1 {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
 }
+
 .status-bar {
   display: flex;
   align-items: center;
@@ -1174,6 +1131,7 @@ onUnmounted(() => {
   color: #94a3b8;
   margin-top: 2px;
 }
+
 .status-dot {
   width: 8px;
   height: 8px;
@@ -1181,19 +1139,23 @@ onUnmounted(() => {
   background: #f59e0b;
   display: inline-block;
 }
+
 .status-dot.connected {
   background: #22c55e;
 }
+
 .badge {
   background: #1e293b;
   padding: 1px 8px;
   border-radius: 10px;
   font-size: 11px;
 }
+
 .header-actions {
   display: flex;
   gap: 8px;
 }
+
 .btn-icon {
   width: 38px;
   height: 38px;
@@ -1205,10 +1167,12 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .btn-icon:hover {
   background: #1e293b;
   color: white;
 }
+
 .btn-primary {
   padding: 8px 16px;
   background: #2563eb;
@@ -1221,17 +1185,21 @@ onUnmounted(() => {
   transition: all 0.2s;
   white-space: nowrap;
 }
+
 .btn-primary:hover {
   background: #1d4ed8;
   transform: translateY(-1px);
 }
+
 .btn-primary.full {
   width: 100%;
   padding: 12px;
 }
+
 /* ============================================================
    CHAT AREA
 ============================================================ */
+
 .chat-area {
   flex: 1;
   overflow-y: auto;
@@ -1240,11 +1208,13 @@ onUnmounted(() => {
   margin: 0 auto;
   width: 100%;
 }
+
 /* WELCOME */
 .welcome {
   text-align: center;
   padding: 40px 20px;
 }
+
 .welcome-icon {
   width: 70px;
   height: 70px;
@@ -1256,15 +1226,18 @@ onUnmounted(() => {
   background: #dbeafe;
   font-size: 35px;
 }
+
 .welcome h2 {
   color: #0f172a;
   font-size: 24px;
   margin: 0;
 }
+
 .welcome p {
   color: #64748b;
   margin: 4px 0 16px;
 }
+
 /* TERMOS MAIS BUSCADOS */
 .termos-container {
   background: white;
@@ -1275,17 +1248,20 @@ onUnmounted(() => {
   max-width: 600px;
   text-align: left;
 }
+
 .termos-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
+
 .termos-titulo {
   font-size: 13px;
   font-weight: 600;
   color: #475569;
 }
+
 .btn-limpar-termos {
   background: transparent;
   border: none;
@@ -1296,15 +1272,18 @@ onUnmounted(() => {
   border-radius: 4px;
   transition: all 0.2s;
 }
+
 .btn-limpar-termos:hover {
   background: #f1f5f9;
   color: #ef4444;
 }
+
 .termos-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
+
 .btn-termo {
   padding: 4px 12px;
   background: #f1f5f9;
@@ -1315,6 +1294,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .btn-termo:hover {
   background: #2563eb;
   color: white;
@@ -1322,9 +1302,11 @@ onUnmounted(() => {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
+
 .btn-termo:active {
   transform: scale(0.95);
 }
+
 .search-info-badge {
   margin-top: 12px;
   padding: 8px 16px;
@@ -1334,9 +1316,11 @@ onUnmounted(() => {
   color: #475569;
   display: inline-block;
 }
+
 .search-info-badge strong {
   color: #2563eb;
 }
+
 .exemplo-busca {
   margin-top: 8px;
   padding: 8px 16px;
@@ -1346,6 +1330,7 @@ onUnmounted(() => {
   color: #92400e;
   display: inline-block;
 }
+
 .suggestions {
   display: flex;
   justify-content: center;
@@ -1353,6 +1338,7 @@ onUnmounted(() => {
   gap: 8px;
   margin-top: 12px;
 }
+
 .suggestions button {
   padding: 8px 16px;
   border-radius: 20px;
@@ -1363,15 +1349,18 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .suggestions button:hover {
   background: #eff6ff;
   border-color: #60a5fa;
 }
+
 /* LOADING */
 .loading-state {
   text-align: center;
   padding: 40px;
 }
+
 .spinner {
   width: 40px;
   height: 40px;
@@ -1381,14 +1370,15 @@ onUnmounted(() => {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
+
 .loading-state p {
   color: #94a3b8;
 }
+
 /* MENSAGENS */
 .message-row {
   display: flex;
@@ -1396,17 +1386,21 @@ onUnmounted(() => {
   max-width: 85%;
   margin-bottom: 20px;
 }
+
 .message-row.usuario {
   flex-direction: row-reverse;
   margin-left: auto;
 }
+
 .message-row.sistema {
   max-width: 100%;
   justify-content: center;
 }
+
 .message-row.sistema .avatar {
   background: #fef3c7;
 }
+
 .avatar {
   width: 38px;
   height: 38px;
@@ -1418,22 +1412,27 @@ onUnmounted(() => {
   background: #e2e8f0;
   font-size: 18px;
 }
+
 .usuario .avatar {
   background: #dbeafe;
 }
+
 .message-content {
   min-width: 0;
   max-width: 100%;
 }
+
 .message-name {
   font-size: 11px;
   font-weight: 600;
   color: #64748b;
   margin-bottom: 4px;
 }
+
 .usuario .message-name {
   text-align: right;
 }
+
 .message {
   padding: 12px 16px;
   border-radius: 14px;
@@ -1444,14 +1443,17 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
 .usuario .message {
   background: #2563eb;
   color: white;
   border-bottom-right-radius: 4px;
 }
+
 .ia .message {
   border-bottom-left-radius: 4px;
 }
+
 .sistema .message {
   background: #fef3c7;
   border-radius: 12px;
@@ -1459,23 +1461,28 @@ onUnmounted(() => {
   max-width: 80%;
   margin: 0 auto;
 }
+
 .time {
   font-size: 10px;
   color: #94a3b8;
   margin-top: 4px;
 }
+
 .usuario .time {
   text-align: right;
 }
+
 /* TAGS DO HISTÓRICO */
 .tags-container {
   margin-top: 10px;
 }
+
 .tags-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
+
 .btn-tag-historico {
   padding: 6px 14px;
   background: #f1f5f9;
@@ -1486,6 +1493,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .btn-tag-historico:hover {
   background: #2563eb;
   color: white;
@@ -1493,18 +1501,22 @@ onUnmounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
+
 .btn-tag-historico:active {
   transform: scale(0.95);
 }
+
 /* OPÇÕES */
 .opcoes-container {
   margin-top: 10px;
 }
+
 .opcoes-grid {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
+
 .btn-opcao {
   display: flex;
   align-items: center;
@@ -1517,33 +1529,39 @@ onUnmounted(() => {
   transition: all 0.2s;
   text-align: left;
 }
+
 .btn-opcao:hover {
   transform: translateX(4px);
   border-color: #2563eb;
   background: #f8fafc;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
+
 .opcao-numero {
   font-weight: 700;
   color: #2563eb;
   font-size: 14px;
   min-width: 24px;
 }
+
 .opcao-texto {
   color: #0f172a;
   font-size: 14px;
   font-weight: 500;
   flex: 1;
 }
+
 .opcao-seta {
   color: #94a3b8;
   font-size: 18px;
   transition: all 0.2s;
 }
+
 .btn-opcao:hover .opcao-seta {
   color: #2563eb;
   transform: translateX(4px);
 }
+
 /* DIGITANDO */
 .typing {
   display: flex;
@@ -1553,6 +1571,7 @@ onUnmounted(() => {
   border-radius: 14px;
   border-bottom-left-radius: 4px;
 }
+
 .typing span {
   width: 8px;
   height: 8px;
@@ -1560,16 +1579,17 @@ onUnmounted(() => {
   background: #64748b;
   animation: typing 1.4s infinite;
 }
+
 .typing span:nth-child(2) {
   animation-delay: .2s;
 }
+
 .typing span:nth-child(3) {
   animation-delay: .4s;
 }
+
 @keyframes typing {
-  0%,
-  60%,
-  100% {
+  0%, 60%, 100% {
     transform: translateY(0);
     opacity: .4;
   }
@@ -1578,6 +1598,7 @@ onUnmounted(() => {
     opacity: 1;
   }
 }
+
 /* FOOTER */
 .footer {
   padding: 12px 20px;
@@ -1585,6 +1606,7 @@ onUnmounted(() => {
   background: white;
   flex-shrink: 0;
 }
+
 .input-area {
   max-width: 900px;
   margin: 0 auto;
@@ -1596,9 +1618,11 @@ onUnmounted(() => {
   border-radius: 14px;
   transition: border-color 0.2s;
 }
+
 .input-area:focus-within {
   border-color: #2563eb;
 }
+
 .input-area textarea {
   flex: 1;
   resize: none;
@@ -1609,6 +1633,7 @@ onUnmounted(() => {
   background: transparent;
   font-family: inherit;
 }
+
 .send-button {
   width: 40px;
   height: 40px;
@@ -1621,14 +1646,17 @@ onUnmounted(() => {
   transition: all 0.2s;
   flex-shrink: 0;
 }
+
 .send-button:hover:not(:disabled) {
   background: #1d4ed8;
   transform: scale(1.05);
 }
+
 .send-button:disabled {
   opacity: .4;
   cursor: not-allowed;
 }
+
 .footer-info {
   max-width: 900px;
   margin: 6px auto 0;
@@ -1639,13 +1667,16 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .error-text {
   color: #ef4444;
 }
+
 .termos-count {
   color: #f59e0b;
   font-weight: 600;
 }
+
 /* MODAL */
 .modal-overlay {
   position: fixed;
@@ -1658,6 +1689,7 @@ onUnmounted(() => {
   background: rgba(15, 23, 42, .6);
   backdrop-filter: blur(4px);
 }
+
 .modal {
   width: 100%;
   max-width: 800px;
@@ -1665,8 +1697,9 @@ onUnmounted(() => {
   overflow-y: auto;
   border-radius: 18px;
   background: white;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, .25);
+  box-shadow: 0 25px 50px rgba(0,0,0,.25);
 }
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -1678,16 +1711,19 @@ onUnmounted(() => {
   background: white;
   z-index: 1;
 }
+
 .modal-header h2 {
   margin: 0;
   color: #0f172a;
   font-size: 20px;
 }
+
 .modal-header p {
   margin: 4px 0 0;
   color: #64748b;
   font-size: 13px;
 }
+
 .close-button {
   width: 36px;
   height: 36px;
@@ -1698,18 +1734,23 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .close-button:hover {
   background: #e2e8f0;
 }
+
 .modal-body {
   padding: 24px 28px;
 }
+
 .modal-footer {
   padding: 0 28px 24px;
 }
+
 .form-group {
   margin-bottom: 16px;
 }
+
 .form-group label {
   display: block;
   font-weight: 600;
@@ -1717,16 +1758,19 @@ onUnmounted(() => {
   font-size: 14px;
   margin-bottom: 4px;
 }
+
 .form-group small {
   color: #94a3b8;
   font-size: 12px;
   display: block;
   margin-top: 4px;
 }
+
 .tag-count {
   color: #2563eb;
   font-weight: 600;
 }
+
 .form-input {
   width: 100%;
   padding: 10px 12px;
@@ -1737,10 +1781,12 @@ onUnmounted(() => {
   transition: all 0.2s;
   font-family: inherit;
 }
+
 .form-input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
+
 /* LISTA DE CONHECIMENTOS NO MODAL */
 .list-header {
   display: flex;
@@ -1750,11 +1796,13 @@ onUnmounted(() => {
   padding-top: 16px;
   border-top: 1px solid #e2e8f0;
 }
+
 .list-header h3 {
   margin: 0;
   color: #334155;
   font-size: 15px;
 }
+
 .list-header span {
   padding: 2px 10px;
   border-radius: 12px;
@@ -1762,11 +1810,13 @@ onUnmounted(() => {
   color: #475569;
   font-size: 12px;
 }
+
 .empty-list {
   text-align: center;
   padding: 20px;
   color: #94a3b8;
 }
+
 .knowledge-item {
   display: flex;
   justify-content: space-between;
@@ -1777,19 +1827,23 @@ onUnmounted(() => {
   border-radius: 8px;
   transition: all 0.2s;
 }
+
 .knowledge-item:hover {
   border-color: #94a3b8;
   background: #f8fafc;
 }
+
 .knowledge-info {
   flex: 1;
   min-width: 0;
 }
+
 .knowledge-info strong {
   display: inline;
   color: #0f172a;
   font-size: 14px;
 }
+
 .categoria-badge {
   display: inline-block;
   margin-left: 8px;
@@ -1799,17 +1853,20 @@ onUnmounted(() => {
   color: #1d4ed8;
   font-size: 11px;
 }
+
 .knowledge-info p {
   margin: 4px 0;
   color: #475569;
   font-size: 13px;
 }
+
 .tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 4px;
 }
+
 .tag {
   background: #eff6ff;
   color: #1d4ed8;
@@ -1817,6 +1874,7 @@ onUnmounted(() => {
   border-radius: 12px;
   font-size: 11px;
 }
+
 .meta {
   display: flex;
   gap: 12px;
@@ -1824,11 +1882,13 @@ onUnmounted(() => {
   color: #94a3b8;
   font-size: 11px;
 }
+
 .item-actions {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
 }
+
 .btn-edit,
 .btn-delete {
   width: 32px;
@@ -1840,70 +1900,79 @@ onUnmounted(() => {
   font-size: 14px;
   background: transparent;
 }
+
 .btn-edit:hover {
   background: #dbeafe;
 }
+
 .btn-delete:hover {
   background: #fee2e2;
 }
+
 /* RESPONSIVO */
 @media (max-width: 768px) {
-  .chat-app {
-    width: 100vw;
-    height: 100vh;
-    bottom: 0;
-    right: 0;
-    border-radius: 0;
-    max-height: none;
-  }
   .header {
     padding: 12px;
   }
+
   .header-content {
     flex-wrap: wrap;
     gap: 10px;
   }
+
   .logo h1 {
     font-size: 16px;
   }
+
   .chat-area {
     padding: 16px;
   }
+
   .message-row {
     max-width: 95%;
   }
+
   .opcoes-grid {
     gap: 4px;
   }
+
   .btn-opcao {
     padding: 8px 12px;
   }
+
   .opcao-texto {
     font-size: 13px;
   }
+
   .termos-container {
     margin: 8px 4px;
     padding: 10px 12px;
   }
+
   .btn-termo {
     font-size: 12px;
     padding: 3px 10px;
   }
+
   .modal {
     max-height: 95vh;
   }
+
   .modal-header,
   .modal-body,
   .modal-footer {
     padding: 16px;
   }
+
   .knowledge-item {
     flex-direction: column;
   }
+
   .item-actions {
     margin-top: 8px;
     align-self: flex-end;
   }
+
   .footer-info {
     flex-direction: column;
     align-items: center;
