@@ -4,6 +4,7 @@ import AppLayout from './components/AppLayout.vue';
 import Login from './components/Login.vue';
 import Dashboard from './components/Dashboard.vue';
 import Register from './components/Register.vue';
+import Faq from './components/Faq.vue';
 import CarteiraDigital from './components/CarteiraDigital.vue';
 import { getAuth } from 'firebase/auth';
 
@@ -12,6 +13,7 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
+  { path: '/faq', name: 'Faq', component: Faq },
 
   // Rotas autenticadas com o layout persistente
   {

@@ -78,8 +78,15 @@
         <p class="register-link">
           Não tem uma conta? <router-link to="/register">Cadastre-se</router-link>
         </p>
+
+        <p class="link-faq">
+          Quer perguntar? <router-link to="/faq">FAQ</router-link>
+        </p>
       </div>
     </div>
+
+    <!-- 🔥 CHAT FLUTUANTE - USANDO O COMPONENTE CORRETO -->
+    <ChatFloating />
   </div>
 </template>
 
@@ -87,6 +94,7 @@
 import { ref } from 'vue';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'vue-router';
+import ChatFloating from '../components/ChatFloating.vue';
 
 const email = ref('');
 const password = ref('');
@@ -124,6 +132,7 @@ const login = async () => {
   grid-template-columns: 1fr 1fr;
   min-height: 100vh;
   width: 100%;
+  position: relative;
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -138,7 +147,7 @@ const login = async () => {
   display: flex;
 
   @media (max-width: 900px) {
-    display: none; // Esconde o lado do hero em telas mobile
+    display: none;
   }
 }
 
@@ -315,6 +324,23 @@ form {
 .register-link {
   text-align: center;
   margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+
+  a {
+    color: #6366f1;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.link-faq {
+  text-align: center;
+  margin-top: 0.75rem;
   font-size: 0.9rem;
   color: #64748b;
 
