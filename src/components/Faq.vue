@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
 import { 
   collection, 
   addDoc, 
@@ -16,12 +15,6 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { db } from '../firebase'
 
 /* =========================================================
-   ROUTER
-========================================================= */
-
-const router = useRouter()
-
-/* =========================================================
    TIPOS
 ========================================================= */
 
@@ -30,7 +23,7 @@ interface Mensagem {
   tipo: 'usuario' | 'ia' | 'sistema'
   texto: string
   horario: string
-  timestamp: Date
+  timestamp: Timestamp
   opcoes?: Conhecimento[]
   tags?: string[]
 }
@@ -47,10 +40,20 @@ interface Conhecimento {
   updatedAt?: Timestamp
 }
 
-interface HistoricoBusca {
+interface ResultadoRelevancia {
+  conhecimento: Conhecimento
+  percentual: number
+}
+
+interface TermoBusca {
   termo: string
-  data: Date
-  resultados: Conhecimento[]
+  data: Timestamp
+}
+
+// 🔥 TIPO PARA O OBJETO DE COMANDOS
+interface Comando {
+  descricao: string
+  acao: () => { texto: string; tags: string[] } | null
 }
 
 
@@ -64,7 +67,7 @@ const mensagens = ref<Mensagem[]>([
     tipo: 'sistema',
     texto: '👋 Olá! Como posso ajudar você hoje?',
     horario: obterHorario(),
-    timestamp: new Date()
+    timestamp: Timestamp.now()
   }
 ])
 
@@ -74,21 +77,22 @@ const chatContainer = ref<HTMLElement | null>(null)
 
 
 /* =========================================================
-   ESTADO - CONHECIMENTOS (FIREBASE)
+   ESTADO - CONHECIMENTOS
 ========================================================= */
 
 const conhecimentos = ref<Conhecimento[]>([])
 const carregando = ref(true)
 const erro = ref<string | null>(null)
 const usuarioAtual = ref<any>(null)
+const statusConexao = ref('Conectando...')
 
 
 /* =========================================================
-   ESTADO - HISTÓRICO DE BUSCAS
+   ESTADO - TERMOS MAIS BUSCADOS
 ========================================================= */
 
-const historicoBuscas = ref<HistoricoBusca[]>([])
-const MAX_HISTORICO = 10
+const termosBuscados = ref<TermoBusca[]>([])
+const MAX_TERMOS = 10
 
 
 /* =========================================================
@@ -104,51 +108,6 @@ const formCategoria = ref('')
 
 
 /* =========================================================
-   🔥 COMANDOS ESPECIAIS
-========================================================= */
-
-const comandos = {
-  'kkk': {
-    descricao: 'Mostra o histórico de buscas como tags',
-    acao: mostrarHistoricoTags
-  },
-  'historico': {
-    descricao: 'Mostra o histórico de buscas como tags',
-    acao: mostrarHistoricoTags
-  }
-}
-
-function mostrarHistoricoTags(): { texto: string; tags: string[] } | null {
-  if (historicoBuscas.value.length === 0) {
-    return {
-      texto: '📭 Nenhuma busca realizada ainda.\n\nDigite algo para começar a buscar!',
-      tags: []
-    }
-  }
-  
-  const termos = historicoBuscas.value.map(item => item.termo)
-  const termosUnicos = [...new Set(termos)]
-  const tags = termosUnicos.slice(0, 10)
-  
-  let texto = '📜 **HISTÓRICO DE BUSCAS**\n\n'
-  texto += `Encontrei ${historicoBuscas.value.length} busca(s) realizadas.\n\n`
-  texto += '🔽 **Clique nos termos abaixo para buscar novamente:**'
-  
-  return { texto, tags }
-}
-
-function processarComando(comando: string): { texto: string; tags: string[] } | null {
-  const cmd = comando.toLowerCase().trim()
-  
-  if (comandos[cmd]) {
-    return comandos[cmd].acao()
-  }
-  
-  return null
-}
-
-
-/* =========================================================
    FIREBASE - CONFIGURAÇÃO
 ========================================================= */
 
@@ -160,6 +119,95 @@ let unsubscribeAuth: (() => void) | null = null
 
 
 /* =========================================================
+   🔥 COMANDOS ESPECIAIS - CORRIGIDO
+========================================================= */
+
+// 🔥 Usando Record<string, Comando> para permitir indexação com string
+const comandos: Record<string, Comando> = {
+  'kkk': {
+    descricao: 'Mostra o histórico de buscas como tags',
+    acao: mostrarHistoricoTags
+  },
+  'historico': {
+    descricao: 'Mostra o histórico de buscas como tags',
+    acao: mostrarHistoricoTags
+  },
+  'help': {
+    descricao: 'Mostra os comandos disponíveis',
+    acao: mostrarAjuda
+  },
+  'ajuda': {
+    descricao: 'Mostra os comandos disponíveis',
+    acao: mostrarAjuda
+  },
+  'limpar': {
+    descricao: 'Limpa o histórico de buscas',
+    acao: limparHistoricoComando
+  },
+  'clear': {
+    descricao: 'Limpa o histórico de buscas',
+    acao: limparHistoricoComando
+  }
+}
+
+// 🔥 FUNÇÕES DOS COMANDOS
+function mostrarHistoricoTags(): { texto: string; tags: string[] } | null {
+  if (termosBuscados.value.length === 0) {
+    return {
+      texto: '📭 Nenhuma busca realizada ainda.\n\nDigite algo para começar a buscar!',
+      tags: []
+    }
+  }
+  
+  const termos = termosBuscados.value.map(item => item.termo)
+  const termosUnicos = [...new Set(termos)]
+  const tags = termosUnicos.slice(0, 10)
+  
+  let texto = '📜 **HISTÓRICO DE BUSCAS**\n\n'
+  texto += `Encontrei ${termosBuscados.value.length} busca(s) realizadas.\n\n`
+  texto += '🔽 **Clique nos termos abaixo para buscar novamente:**'
+  
+  return { texto, tags }
+}
+
+function mostrarAjuda(): { texto: string; tags: string[] } | null {
+  let texto = '📚 **COMANDOS DISPONÍVEIS**\n\n'
+  texto += 'Digite um dos comandos abaixo:\n\n'
+  
+  for (const [comando, info] of Object.entries(comandos)) {
+    texto += `🔹 **${comando}** - ${info.descricao}\n`
+  }
+  
+  texto += '\n💡 Dica: Digite "kkk" para ver seu histórico rapidamente!'
+  
+  return { texto, tags: [] }
+}
+
+function limparHistoricoComando(): { texto: string; tags: string[] } | null {
+  termosBuscados.value = []
+  try {
+    localStorage.removeItem('termos_buscados')
+  } catch (e) {
+    // Ignora
+  }
+  return { texto: '🧹 Histórico de buscas limpo com sucesso!', tags: [] }
+}
+
+// 🔥 PROCESSADOR DE COMANDO - CORRIGIDO
+function processarComando(comando: string): { texto: string; tags: string[] } | null {
+  const cmd = comando.toLowerCase().trim()
+  
+  // 🔥 Usa 'in' para verificar se a chave existe no objeto
+  if (cmd in comandos) {
+    const comandoEncontrado = comandos[cmd]
+    return comandoEncontrado.acao()
+  }
+  
+  return null
+}
+
+
+/* =========================================================
    AUTENTICAÇÃO
 ========================================================= */
 
@@ -167,9 +215,11 @@ function initAuth() {
   unsubscribeAuth = onAuthStateChanged(auth, (user) => {
     if (user) {
       usuarioAtual.value = user
+      statusConexao.value = `👤 ${user.email}`
       console.log('✅ Usuário autenticado:', user.email)
     } else {
       usuarioAtual.value = null
+      statusConexao.value = '👤 Visitante'
       console.log('⚠️ Usuário não autenticado')
     }
   })
@@ -177,7 +227,7 @@ function initAuth() {
 
 
 /* =========================================================
-   CARREGAR CONHECIMENTOS DO FIREBASE
+   CARREGAR CONHECIMENTOS
 ========================================================= */
 
 function carregarConhecimentos() {
@@ -188,11 +238,12 @@ function carregarConhecimentos() {
     
     unsubscribe = onSnapshot(conhecimentosQuery, 
       (snapshot) => {
-        console.log('📦 Conhecimentos carregados do Firebase:', snapshot.size)
+        console.log('📦 Conhecimentos carregados:', snapshot.size)
         
         if (snapshot.empty) {
           conhecimentos.value = []
           carregando.value = false
+          adicionarConhecimentosPadrao()
           return
         }
         
@@ -226,9 +277,52 @@ function carregarConhecimentos() {
   }
 }
 
+async function adicionarConhecimentosPadrao() {
+  const conhecimentosPadrao = [
+    {
+      pergunta: 'Como reativar um processo?',
+      resposta: 'Para reativar um processo, siga os passos:\n\n1. Acesse o sistema\n2. Busque o processo pelo número\n3. Clique em "Reativar"\n4. Informe o motivo\n5. Confirme a reativação',
+      palavrachave: ['reativar', 'reativação', 'processo', 'suspenso', 'arquivado'],
+      categoria: 'Processos'
+    },
+    {
+      pergunta: 'Como cancelar um serviço?',
+      resposta: 'Para cancelar um serviço:\n\n1. Acesse sua conta\n2. Vá em "Meus Serviços"\n3. Selecione o serviço\n4. Clique em "Cancelar"\n5. Confirme o cancelamento',
+      palavrachave: ['cancelar', 'cancelamento', 'serviço', 'contrato'],
+      categoria: 'Serviços'
+    },
+    {
+      pergunta: 'O que é Vue.js?',
+      resposta: 'Vue.js é um framework JavaScript progressivo para construir interfaces de usuário.',
+      palavrachave: ['vue', 'vuejs', 'framework', 'javascript', 'frontend'],
+      categoria: 'Programação'
+    },
+    {
+      pergunta: 'Como funciona a busca?',
+      resposta: 'A busca analisa 3 campos: Pergunta, Resposta e Palavras-chave.',
+      palavrachave: ['busca', 'pesquisa', 'relevância'],
+      categoria: 'Sistema'
+    }
+  ]
+  
+  for (const item of conhecimentosPadrao) {
+    try {
+      await addDoc(conhecimentosCollection, {
+        ...item,
+        criadorId: 'sistema',
+        criadorEmail: 'sistema@assistente.com',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      })
+    } catch (error) {
+      console.error('Erro ao adicionar conhecimento padrão:', error)
+    }
+  }
+}
+
 
 /* =========================================================
-   CRUD - CONHECIMENTOS (FIREBASE)
+   CRUD - CONHECIMENTOS
 ========================================================= */
 
 async function adicionarConhecimento(pergunta: string, resposta: string, palavras: string[], categoria?: string) {
@@ -278,7 +372,7 @@ async function deletarConhecimento(id: string) {
 
 
 /* =========================================================
-   🔥 BUSCA SIMPLES
+   SISTEMA DE BUSCA
 ========================================================= */
 
 function obterHorario(): string {
@@ -298,94 +392,187 @@ function normalizarTexto(texto: string): string {
     .trim()
 }
 
-function buscarConhecimentos(termo: string): Conhecimento[] {
-  const termoNormalizado = normalizarTexto(termo)
-  const palavrasBusca = termoNormalizado.split(' ').filter(p => p.length >= 3)
+function obterPalavras(texto: string): string[] {
+  return normalizarTexto(texto)
+    .split(' ')
+    .filter(palavra => palavra.length >= 2)
+}
+
+function obterPartesPalavras(texto: string): string[] {
+  const palavras = obterPalavras(texto)
+  const partes: string[] = []
   
-  if (palavrasBusca.length === 0) {
-    console.log('🔍 Busca ignorada: termos muito curtos')
-    return []
-  }
-  
-  console.log('🔍 Buscando por:', palavrasBusca)
-  console.log('📚 Total de conhecimentos:', conhecimentos.value.length)
-  
-  const resultados: { item: Conhecimento; matches: number }[] = []
-  
-  for (const item of conhecimentos.value) {
-    let matches = 0
-    const textoPergunta = normalizarTexto(item.pergunta)
-    const textoResposta = normalizarTexto(item.resposta)
-    const textoPalavrasChave = item.palavrachave.map(p => normalizarTexto(p)).join(' ')
-    
-    for (const palavra of palavrasBusca) {
-      if (textoPergunta.includes(palavra)) {
-        matches += 3
-        continue
-      }
-      if (textoPalavrasChave.includes(palavra)) {
-        matches += 2
-        continue
-      }
-      if (textoResposta.includes(palavra)) {
-        matches += 1
-        continue
-      }
+  palavras.forEach(palavra => {
+    for (let i = 3; i <= palavra.length; i++) {
+      partes.push(palavra.substring(0, i))
     }
-    
-    if (matches > 0) {
-      resultados.push({ item, matches })
-    }
-  }
-  
-  resultados.sort((a, b) => b.matches - a.matches)
-  
-  console.log('📊 Resultados encontrados:', resultados.length)
-  resultados.slice(0, 5).forEach((r, i) => {
-    console.log(`  ${i+1}. ${r.matches} pontos - ${r.item.pergunta}`)
   })
   
-  return resultados.map(r => r.item).slice(0, 5)
+  return [...new Set(partes)]
+}
+
+function buscarConhecimentos(perguntaUsuario: string): Conhecimento[] {
+  const palavrasUsuario = obterPalavras(perguntaUsuario)
+  const partesUsuario = obterPartesPalavras(perguntaUsuario)
+  const perguntaNormalizada = normalizarTexto(perguntaUsuario)
+  
+  const resultados: ResultadoRelevancia[] = []
+  
+  conhecimentos.value.forEach(conhecimento => {
+    const palavrasPergunta = obterPalavras(conhecimento.pergunta)
+    const palavrasResposta = obterPalavras(conhecimento.resposta)
+    const palavrasChave = conhecimento.palavrachave.flatMap(p => obterPalavras(p))
+    
+    const perguntaConhecimentoNormalizada = normalizarTexto(conhecimento.pergunta)
+    
+    let matchPergunta = 0
+    let matchResposta = 0
+    let matchPalavrasChave = 0
+    let totalPergunta = 0
+    let totalResposta = 0
+    let totalPalavrasChave = 0
+    
+    // BUSCA NA PERGUNTA (Peso 3)
+    if (perguntaNormalizada === perguntaConhecimentoNormalizada) {
+      matchPergunta = 30
+      totalPergunta = 30
+    } else {
+      palavrasPergunta.forEach(palavraPergunta => {
+        totalPergunta += 3
+        const encontrou = palavrasUsuario.some(palavraUsuario => 
+          palavraUsuario === palavraPergunta
+        )
+        if (encontrou) {
+          matchPergunta += 3
+        }
+      })
+      
+      palavrasPergunta.forEach(palavraPergunta => {
+        partesUsuario.forEach(parte => {
+          if (palavraPergunta.startsWith(parte) || parte.startsWith(palavraPergunta)) {
+            matchPergunta += 2
+            totalPergunta += 2
+          }
+        })
+      })
+    }
+    
+    // BUSCA NA RESPOSTA (Peso 2)
+    palavrasResposta.forEach(palavraResposta => {
+      totalResposta += 2
+      const encontrou = palavrasUsuario.some(palavraUsuario => 
+        palavraUsuario === palavraResposta
+      )
+      if (encontrou) {
+        matchResposta += 2
+      }
+    })
+    
+    palavrasResposta.forEach(palavraResposta => {
+      partesUsuario.forEach(parte => {
+        if (palavraResposta.startsWith(parte) || parte.startsWith(palavraResposta)) {
+          matchResposta += 1
+          totalResposta += 1
+        }
+      })
+    })
+    
+    // BUSCA NAS PALAVRAS-CHAVE (Peso 5)
+    palavrasChave.forEach(palavraChave => {
+      totalPalavrasChave += 5
+      const encontrou = palavrasUsuario.some(palavraUsuario => 
+        palavraUsuario === palavraChave
+      )
+      if (encontrou) {
+        matchPalavrasChave += 5
+      }
+    })
+    
+    palavrasChave.forEach(palavraChave => {
+      partesUsuario.forEach(parte => {
+        if (palavraChave.startsWith(parte) || parte.startsWith(palavraChave)) {
+          matchPalavrasChave += 3
+          totalPalavrasChave += 3
+        }
+      })
+    })
+    
+    // CALCULA PERCENTUAIS
+    const pPergunta = totalPergunta > 0 ? Math.round((matchPergunta / totalPergunta) * 100) : 0
+    const pResposta = totalResposta > 0 ? Math.round((matchResposta / totalResposta) * 100) : 0
+    const pPalavrasChave = totalPalavrasChave > 0 ? Math.round((matchPalavrasChave / totalPalavrasChave) * 100) : 0
+    
+    const total = (pPergunta * 3 + pResposta * 2 + pPalavrasChave * 5) / 10
+    
+    if (total > 0) {
+      resultados.push({
+        conhecimento,
+        percentual: Math.round(total)
+      })
+    }
+  })
+  
+  resultados.sort((a, b) => b.percentual - a.percentual)
+  
+  return resultados.slice(0, 5).map(r => r.conhecimento)
 }
 
 
 /* =========================================================
-   🔥 HISTÓRICO DE BUSCAS
+   GERENCIAR TERMOS MAIS BUSCADOS
 ========================================================= */
 
-function adicionarHistorico(termo: string, resultados: Conhecimento[]) {
-  historicoBuscas.value = historicoBuscas.value.filter(h => h.termo !== termo)
+function adicionarTermoBuscado(termo: string) {
+  termosBuscados.value = termosBuscados.value.filter(t => t.termo !== termo)
   
-  historicoBuscas.value.unshift({
+  termosBuscados.value.unshift({
     termo: termo,
-    data: new Date(),
-    resultados: resultados
+    data: Timestamp.now()
   })
   
-  if (historicoBuscas.value.length > MAX_HISTORICO) {
-    historicoBuscas.value = historicoBuscas.value.slice(0, MAX_HISTORICO)
+  if (termosBuscados.value.length > MAX_TERMOS) {
+    termosBuscados.value = termosBuscados.value.slice(0, MAX_TERMOS)
   }
   
   try {
-    localStorage.setItem('historico_buscas', JSON.stringify(historicoBuscas.value))
+    localStorage.setItem('termos_buscados', JSON.stringify(termosBuscados.value))
   } catch (e) {
     // Ignora
   }
 }
 
-function carregarHistorico() {
+function carregarTermosBuscados() {
   try {
-    const saved = localStorage.getItem('historico_buscas')
+    const saved = localStorage.getItem('termos_buscados')
     if (saved) {
       const parsed = JSON.parse(saved)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        historicoBuscas.value = parsed.map((h: any) => ({
-          ...h,
-          data: new Date(h.data)
-        }))
+        termosBuscados.value = parsed
         return
       }
     }
+  } catch (e) {
+    // Ignora
+  }
+  
+  termosBuscados.value = [
+    { termo: 'reativar', data: Timestamp.now() },
+    { termo: 'cancelar', data: Timestamp.now() },
+    { termo: 'vue', data: Timestamp.now() },
+    { termo: 'processo', data: Timestamp.now() }
+  ]
+}
+
+function buscarPorTermo(termo: string) {
+  mensagem.value = termo
+  enviarMensagem()
+}
+
+function limparTermosBuscados() {
+  if (!confirm('Limpar histórico de termos buscados?')) return
+  termosBuscados.value = []
+  try {
+    localStorage.removeItem('termos_buscados')
   } catch (e) {
     // Ignora
   }
@@ -402,17 +589,12 @@ function adicionarMensagem(tipo: 'usuario' | 'ia' | 'sistema', texto: string, op
     tipo,
     texto,
     horario: obterHorario(),
-    timestamp: new Date(),
+    timestamp: Timestamp.now(),
     opcoes: opcoes || [],
     tags: tags || []
   }
   
   mensagens.value.push(mensagem)
-}
-
-function buscarPorTag(termo: string) {
-  mensagem.value = termo
-  enviarMensagem()
 }
 
 async function enviarMensagem() {
@@ -421,26 +603,35 @@ async function enviarMensagem() {
     return
   }
   
+  // 🔥 VERIFICA SE É UM COMANDO
+  const resultadoComando = processarComando(texto)
+  
+  if (resultadoComando) {
+    adicionarMensagem('usuario', texto)
+    mensagem.value = ''
+    await rolarParaFinal()
+    
+    digitando.value = true
+    setTimeout(async () => {
+      adicionarMensagem('ia', resultadoComando.texto, [], resultadoComando.tags)
+      digitando.value = false
+      await rolarParaFinal()
+    }, 500)
+    return
+  }
+  
+  // Não é comando, faz a busca normal
+  adicionarTermoBuscado(texto)
   adicionarMensagem('usuario', texto)
   mensagem.value = ''
   await rolarParaFinal()
   
   digitando.value = true
   setTimeout(async () => {
-    const resultadoComando = processarComando(texto)
-    
-    if (resultadoComando) {
-      adicionarMensagem('ia', resultadoComando.texto, [], resultadoComando.tags)
-      digitando.value = false
-      await rolarParaFinal()
-      return
-    }
-    
     const resultados = buscarConhecimentos(texto)
-    adicionarHistorico(texto, resultados)
     
     if (resultados.length === 0) {
-      adicionarMensagem('ia', '🤔 Não encontrei nenhum conhecimento relacionado a "' + texto + '".\n\n💡 Tente usar palavras-chave diferentes ou seja mais específico.')
+      adicionarMensagem('ia', '🤔 Não encontrei nenhum conhecimento relacionado a "' + texto + '".\n\nTente reformular ou adicione este conhecimento clicando em 🧠 Gerenciar.')
     } else {
       const textoResposta = `🔍 Encontrei ${resultados.length} opção(ões) para "${texto}":`
       adicionarMensagem('ia', textoResposta, resultados)
@@ -486,14 +677,9 @@ function limparChat() {
       tipo: 'sistema',
       texto: '🧹 Chat limpo! Como posso ajudar?',
       horario: obterHorario(),
-      timestamp: new Date()
+      timestamp: Timestamp.now()
     }
   ]
-}
-
-// 🔥 FUNÇÃO PARA IR PARA HOME
-function irParaHome() {
-  router.push('/')
 }
 
 
@@ -611,14 +797,25 @@ const totalPalavrasChave = computed(() => {
   return palavras.length
 })
 
+const termosUnicos = computed(() => {
+  const vistos = new Set()
+  return termosBuscados.value.filter(item => {
+    if (vistos.has(item.termo)) return false
+    vistos.add(item.termo)
+    return true
+  })
+})
+
 
 /* =========================================================
    LIFECYCLE
 ========================================================= */
 
 onMounted(() => {
-  console.log('🚀 Iniciando Assistente...')
-  carregarHistorico()
+  console.log('🚀 Iniciando Assistente com Firebase...')
+  console.log('📁 Coleção:', collectionName)
+  console.log('🔍 Busca: palavras com 3+ caracteres')
+  carregarTermosBuscados()
   initAuth()
   carregarConhecimentos()
 })
@@ -652,9 +849,6 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="header-actions">
-          <button class="btn-home" @click="irParaHome" title="Ir para Home">
-            🏠 Home
-          </button>
           <button class="btn-icon" @click="limparChat" title="Limpar chat">
             🗑️
           </button>
@@ -673,6 +867,40 @@ onUnmounted(() => {
         <div class="welcome-icon">🤖</div>
         <h2>Como posso ajudar?</h2>
         <p>Faça uma pergunta para consultar a base de conhecimento.</p>
+        
+        <!-- TERMOS MAIS BUSCADOS -->
+        <div v-if="termosUnicos.length > 0" class="termos-container">
+          <div class="termos-header">
+            <span class="termos-titulo">🔥 Termos mais buscados</span>
+            <button class="btn-limpar-termos" @click="limparTermosBuscados" title="Limpar histórico">
+              ✕
+            </button>
+          </div>
+          <div class="termos-grid">
+            <button 
+              v-for="item in termosUnicos" 
+              :key="item.termo"
+              class="btn-termo"
+              @click="buscarPorTermo(item.termo)"
+            >
+              {{ item.termo }}
+            </button>
+          </div>
+        </div>
+
+        <div class="search-info-badge">
+          🔍 Busca nos dados do Firebase: 
+          <strong>Pergunta</strong> · <strong>Resposta</strong> · <strong>Palavras-chave</strong>
+        </div>
+        <div class="suggestions">
+          <button @click="mensagem = 'reativar'">🔄 Reativar</button>
+          <button @click="mensagem = 'cancelar'">📋 Cancelar</button>
+          <button @click="mensagem = 'vue'">💻 Vue</button>
+          <button @click="mensagem = 'processo'">📜 Processo</button>
+        </div>
+        <div class="exemplo-busca">
+          💡 Digite "kkk" para ver seu histórico de buscas como tags clicáveis!
+        </div>
       </div>
 
       <!-- Loading -->
@@ -683,10 +911,12 @@ onUnmounted(() => {
 
       <!-- Mensagens -->
       <div v-for="item in mensagens" :key="item.id" class="message-row" :class="item.tipo">
-         
+        <div class="avatar">
+          {{ item.tipo === 'ia' ? '🤖' : item.tipo === 'sistema' ? '⚡' : '👤' }}
+        </div>
         <div class="message-content">
           <div class="message-name">
-            {{ item.tipo === 'ia' ? 'Assistente IA' : item.tipo === 'sistema' ? 'Sistema' : 'Usuário IA' }}
+            {{ item.tipo === 'ia' ? 'Assistente IA' : item.tipo === 'sistema' ? 'Sistema' : 'Você' }}
           </div>
           
           <div class="message" v-html="item.texto.replace(/\n/g, '<br>').replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>')"></div>
@@ -698,14 +928,14 @@ onUnmounted(() => {
                 v-for="tag in item.tags" 
                 :key="tag"
                 class="btn-tag-historico"
-                @click="buscarPorTag(tag)"
+                @click="buscarPorTermo(tag)"
               >
                 🔍 {{ tag }}
               </button>
             </div>
           </div>
           
-          <!-- OPÇÕES DE RESPOSTA -->
+          <!-- OPÇÕES -->
           <div v-if="item.opcoes && item.opcoes.length > 0" class="opcoes-container">
             <div class="opcoes-grid">
               <button 
@@ -756,11 +986,8 @@ onUnmounted(() => {
       </div>
       <div class="footer-info">
         <span>💡 Digite Enter para enviar</span>
-        <span>💡 Digite "KKK", aperte Enter</span>
         <span v-if="erro" class="error-text">⚠️ {{ erro }}</span>
-        <span v-if="historicoBuscas.length > 0" class="historico-count">
-          📜 {{ historicoBuscas.length }} buscas
-        </span>
+        <span v-if="termosUnicos.length > 0" class="termos-count">🔥 {{ termosUnicos.length }} termos</span>
       </div>
     </footer>
 
@@ -928,27 +1155,6 @@ onUnmounted(() => {
 .header-actions {
   display: flex;
   gap: 8px;
-  align-items: center;
-}
-
-.btn-home {
-  padding: 8px 16px;
-  background: transparent;
-  color: #cbd5e1;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.btn-home:hover {
-  background: #1e293b;
-  color: white;
-  border-color: #475569;
 }
 
 .btn-icon {
@@ -1030,7 +1236,124 @@ onUnmounted(() => {
 
 .welcome p {
   color: #64748b;
-  margin: 4px 0 0;
+  margin: 4px 0 16px;
+}
+
+/* TERMOS MAIS BUSCADOS */
+.termos-container {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 12px auto;
+  max-width: 600px;
+  text-align: left;
+}
+
+.termos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.termos-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.btn-limpar-termos {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-limpar-termos:hover {
+  background: #f1f5f9;
+  color: #ef4444;
+}
+
+.termos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.btn-termo {
+  padding: 4px 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-termo:hover {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+}
+
+.btn-termo:active {
+  transform: scale(0.95);
+}
+
+.search-info-badge {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #475569;
+  display: inline-block;
+}
+
+.search-info-badge strong {
+  color: #2563eb;
+}
+
+.exemplo-busca {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #92400e;
+  display: inline-block;
+}
+
+.suggestions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.suggestions button {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: white;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suggestions button:hover {
+  background: #eff6ff;
+  border-color: #60a5fa;
 }
 
 /* LOADING */
@@ -1150,10 +1473,7 @@ onUnmounted(() => {
   text-align: right;
 }
 
-/* ============================================================
-   TAGS DO HISTÓRICO
-============================================================ */
-
+/* TAGS DO HISTÓRICO */
 .tags-container {
   margin-top: 10px;
 }
@@ -1187,7 +1507,7 @@ onUnmounted(() => {
   transform: scale(0.95);
 }
 
-/* OPÇÕES DE RESPOSTA */
+/* OPÇÕES */
 .opcoes-container {
   margin-top: 10px;
 }
@@ -1353,8 +1673,8 @@ onUnmounted(() => {
   color: #ef4444;
 }
 
-.historico-count {
-  color: #2563eb;
+.termos-count {
+  color: #f59e0b;
   font-weight: 600;
 }
 
@@ -1625,18 +1945,14 @@ onUnmounted(() => {
     font-size: 13px;
   }
 
-  .tags-grid {
-    justify-content: center;
+  .termos-container {
+    margin: 8px 4px;
+    padding: 10px 12px;
   }
 
-  .header-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .btn-home {
-    padding: 6px 12px;
+  .btn-termo {
     font-size: 12px;
+    padding: 3px 10px;
   }
 
   .modal {
